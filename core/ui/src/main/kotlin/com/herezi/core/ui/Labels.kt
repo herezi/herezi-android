@@ -152,3 +152,35 @@ fun sourceLabel(source: String): String = when (source) {
     "seoul_culture" -> "서울 열린데이터광장"
     else -> source
 }
+
+/**
+ * 히어로 상단 배지 (DESIGN.md §6.13). 오늘 나중에 시작 "오늘 17:00 시작", 진행 중 오늘 끝 "오늘 22:00까지"
+ * (23:59 끝이면 "오늘까지"), 진행 중 "지금 진행 중". 해당 없으면 null.
+ */
+fun formatHeroBadge(start: Instant, end: Instant?, now: Instant, zone: ZoneId = Seoul): String? {
+    val today = now.atZone(zone).toLocalDate()
+    val s = start.atZone(zone)
+    return when {
+        start.isAfter(now) && s.toLocalDate() == today -> "오늘 ${TimeFormat.format(s)} 시작"
+        start.isAfter(now) -> null
+        end != null && end.isAfter(now) && end.atZone(zone).toLocalDate() == today -> formatEndsToday(end, zone)
+        end == null || end.isAfter(now) -> "지금 진행 중"
+        else -> null
+    }
+}
+
+private val LastMinute = LocalTime.of(23, 59)
+
+/** "오늘 22:00까지", 23:59 끝이면 "오늘까지". */
+fun formatEndsToday(end: Instant, zone: ZoneId = Seoul): String {
+    val t = end.atZone(zone).toLocalTime()
+    return if (!t.isBefore(LastMinute)) "오늘까지" else "오늘 ${TimeFormat.format(t)}까지"
+}
+
+/** 히어로 메타의 기간: 진행 중 여러 날이면 "12.14(일)까지", 그 밖엔 카드 기간 줄 규칙. */
+fun formatHeroPeriod(start: Instant, end: Instant?, now: Instant, zone: ZoneId = Seoul): String {
+    val endDay = end?.atZone(zone)
+    val ongoingMultiDay =
+        !start.isAfter(now) && endDay != null && endDay.toLocalDate() != now.atZone(zone).toLocalDate()
+    return if (ongoingMultiDay) "${endDay?.shortDate()}까지" else formatCardPeriod(start, end, now, zone).text
+}

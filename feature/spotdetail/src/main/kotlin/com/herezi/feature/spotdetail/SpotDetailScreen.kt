@@ -52,7 +52,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -68,7 +67,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.herezi.core.domain.Spot
 import com.herezi.core.ui.HereziLinks
 import com.herezi.core.ui.component.CategoryDot
-import com.herezi.core.ui.component.CategoryThumbnail
 import com.herezi.core.ui.component.EndedBadge
 import com.herezi.core.ui.component.ErrorState
 import com.herezi.core.ui.component.FreeBadge
@@ -76,6 +74,7 @@ import com.herezi.core.ui.component.HereziToastHost
 import com.herezi.core.ui.component.PrimaryButton
 import com.herezi.core.ui.component.SecondaryButton
 import com.herezi.core.ui.component.SkeletonBlock
+import com.herezi.core.ui.component.SpotImage
 import com.herezi.core.ui.component.StatusMessage
 import com.herezi.core.ui.formatDetailPeriod
 import com.herezi.core.ui.formatDetailPeriodNote
@@ -251,10 +250,8 @@ private fun DetailContent(
     val spot = state.spot
     val now = remember(spot) { Instant.now() }
     Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
-        CategoryThumbnail(
-            spot.category,
-            iconSize = 56.dp,
-            shape = RectangleShape,
+        SpotImage(
+            spot,
             modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f).onSizeChanged { onImageHeight(it.height) },
         )
         Column(Modifier.padding(horizontal = HereziSpace.s5).padding(top = HereziSpace.s5)) {

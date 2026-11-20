@@ -16,7 +16,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             HereziTheme {
                 CompositionLocalProvider(LocalMapConfig provides MapConfig(enabled = BuildConfig.MAP_ENABLED)) {
-                    HereziNavHost()
+                    HereziApp()
                 }
             }
         }

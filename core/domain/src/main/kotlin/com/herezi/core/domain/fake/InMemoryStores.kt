@@ -68,3 +68,7 @@ class FakeLocationSource(
 
     override suspend fun current(): GeoPoint? = location
 }
+
+class FakeReverseGeocoder(var name: String? = null) : com.herezi.core.domain.ReverseGeocoder {
+    override suspend fun placeName(point: GeoPoint): String? = name
+}

@@ -1,10 +1,13 @@
 package com.herezi.feature.nearby
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.herezi.core.domain.Category
 import com.herezi.core.domain.GeoPoint
+import com.herezi.core.domain.ListFilter
 import com.herezi.core.domain.LocationSource
+import com.herezi.core.domain.ReverseGeocoder
 import com.herezi.core.domain.Spot
 import com.herezi.core.domain.SpotQuery
 import com.herezi.core.domain.SpotsRepository
@@ -20,35 +23,46 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class NearbyFilter(
-    val categories: Set<Category> = emptySet(),
-    val period: When = When.NOW,
-    val freeOnly: Boolean = false,
-)
+typealias NearbyFilter = ListFilter
 
 data class NearbyUiState(
     val center: GeoPoint = GeoPoint.SeoulCityHall,
     /** 위치를 몰라 서울시청 기준이면 true → 위치 꺼짐 배너. */
     val locationOff: Boolean = true,
+    /** 상단 위치명. null 이면 확인 중(스켈레톤). */
+    val locationName: String? = null,
     val filter: NearbyFilter = NearbyFilter(),
     val spots: List<Spot> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,
+    val nextCursor: String? = null,
+    val loadingMore: Boolean = false,
+    val moreFailed: Boolean = false,
+    /** 지도 탭(S2)으로 쓰일 때 true. */
     val showMap: Boolean = false,
-)
+) {
+    val hasMore: Boolean get() = nextCursor != null
+
+    /** 필터가 기본값(지금·전체·무료 끔)이 아니면 true → "조건에 맞는 볼거리가 없어요". */
+    val filtered: Boolean get() = filter != NearbyFilter()
+}
 
 /**
- * 근처 목록 화면 상태. 필터가 바뀔 때마다 이전 요청을 취소하고 다시 불러온다.
- * 위치를 모르면 서울시청 기준. 화면에 돌아올 때 [refreshLocation] 으로 위치가 바뀌었는지 본다.
+ * 전체 목록(S1b)·지도 탭(S2) 상태. 시작 필터는 내비게이션 인자로 받는다(홈의 타일·전체 보기).
+ * 필터가 바뀔 때마다 이전 요청을 취소하고 다시 불러온다. 위치를 모르면 서울시청 기준.
  */
 @HiltViewModel
 class NearbyViewModel
 @Inject
 constructor(
+    savedStateHandle: SavedStateHandle,
     private val repository: SpotsRepository,
     private val location: LocationSource,
+    private val geocoder: ReverseGeocoder,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(NearbyUiState())
+    private val _state = MutableStateFlow(
+        NearbyUiState(filter = filterFrom(savedStateHandle), showMap = savedStateHandle.get<Boolean>(ARG_MAP) == true),
+    )
     val state: StateFlow<NearbyUiState> = _state.asStateFlow()
 
     private var loadJob: Job? = null
@@ -67,6 +81,8 @@ constructor(
             loadedOnce = true
             _state.update { it.copy(center = origin.point, locationOff = !origin.known) }
             load()
+            val name = if (origin.known) geocoder.placeName(origin.point) ?: NAME_UNKNOWN else NAME_CITY_HALL
+            _state.update { it.copy(locationName = name) }
         }
     }
 
@@ -75,18 +91,37 @@ constructor(
         it.copy(categories = if (category in categories) categories - category else categories + category)
     }
 
-    /** 빈 상태 "필터 초기화": 카테고리·무료를 끄고 기간은 기본(지금)으로. */
-    fun resetFilters() = updateFilter { NearbyFilter() }
-
+    /** `전체` 칩: 카테고리 선택을 모두 해제. */
     fun clearCategories() = updateFilter { it.copy(categories = emptySet()) }
 
     fun setPeriod(period: When) = updateFilter { it.copy(period = period) }
 
     fun setFreeOnly(freeOnly: Boolean) = updateFilter { it.copy(freeOnly = freeOnly) }
 
-    fun toggleMap() = _state.update { it.copy(showMap = !it.showMap) }
+    /** 빈 상태 "필터 초기화": 지금·전체·무료 끔. */
+    fun resetFilters() = updateFilter { NearbyFilter() }
 
     fun refresh() = load()
+
+    /** 끝에서 몇 개 남았을 때 부른다. 다음 페이지가 없거나 불러오는 중이면 무시. */
+    fun loadMore() {
+        val s = _state.value
+        val cursor = s.nextCursor ?: return
+        if (s.loadingMore || s.loading) return
+        _state.update { it.copy(loadingMore = true, moreFailed = false) }
+        loadJob = viewModelScope.launch {
+            try {
+                val page = repository.nearby(query(s).copy(cursor = cursor))
+                _state.update {
+                    it.copy(spots = it.spots + page.items, nextCursor = page.nextCursor, loadingMore = false)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
+                _state.update { it.copy(loadingMore = false, moreFailed = true) }
+            }
+        }
+    }
 
     private fun updateFilter(change: (NearbyFilter) -> NearbyFilter) {
         val before = _state.value.filter
@@ -96,27 +131,47 @@ constructor(
         load()
     }
 
+    private fun query(s: NearbyUiState) = SpotQuery(
+        center = s.center,
+        categories = s.filter.categories,
+        period = s.filter.period,
+        freeOnly = s.filter.freeOnly,
+    )
+
     private fun load() {
         loadJob?.cancel()
+        // 필터 변경 시 이전 목록 위에 덮지 않고 교체(스켈레톤).
+        _state.update {
+            it.copy(loading = true, error = null, spots = emptyList(), nextCursor = null, moreFailed = false)
+        }
         val snapshot = _state.value
-        _state.update { it.copy(loading = true, error = null) }
         loadJob =
             viewModelScope.launch {
-                val query =
-                    SpotQuery(
-                        center = snapshot.center,
-                        categories = snapshot.filter.categories,
-                        period = snapshot.filter.period,
-                        freeOnly = snapshot.filter.freeOnly,
-                    )
                 try {
-                    val page = repository.nearby(query)
-                    _state.update { it.copy(spots = page.items, loading = false) }
+                    val page = repository.nearby(query(snapshot))
+                    _state.update { it.copy(spots = page.items, nextCursor = page.nextCursor, loading = false) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                     _state.update { it.copy(loading = false, error = e.message ?: "불러오지 못했습니다") }
                 }
             }
+    }
+
+    companion object {
+        const val ARG_WHEN = "when"
+        const val ARG_CATEGORY = "category"
+        const val ARG_FREE = "free"
+        const val ARG_MAP = "map"
+
+        const val NAME_UNKNOWN = "내 주변"
+        const val NAME_CITY_HALL = "서울시청 주변"
+
+        /** 내비게이션 인자 → 시작 필터. 모르는 값은 기본값. */
+        fun filterFrom(handle: SavedStateHandle): NearbyFilter = NearbyFilter(
+            period = handle.get<String>(ARG_WHEN)?.let { c -> When.entries.firstOrNull { it.code == c } } ?: When.NOW,
+            categories = handle.get<String>(ARG_CATEGORY).orEmpty().split(",").mapNotNull(Category::fromCode).toSet(),
+            freeOnly = handle.get<Boolean>(ARG_FREE) == true,
+        )
     }
 }

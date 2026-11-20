@@ -76,4 +76,16 @@ class LabelsTest {
         assertEquals("한국관광공사", sourceLabel("tourapi"))
         assertEquals("fake", sourceLabel("fake"))
     }
+
+    @Test
+    fun `히어로 배지와 기간`() {
+        assertEquals("오늘 17:00 시작", formatHeroBadge(kst("2026-11-20T17:00:00"), kst("2026-11-20T22:00:00"), now))
+        assertEquals("오늘 22:00까지", formatHeroBadge(kst("2026-11-19T10:00:00"), kst("2026-11-20T22:00:00"), now))
+        assertEquals("오늘까지", formatHeroBadge(kst("2026-11-19T10:00:00"), kst("2026-11-20T23:59:00"), now))
+        assertEquals("지금 진행 중", formatHeroBadge(kst("2026-11-19T10:00:00"), kst("2026-12-14T22:00:00"), now))
+        assertEquals("지금 진행 중", formatHeroBadge(kst("2026-11-19T10:00:00"), null, now))
+        assertNull(formatHeroBadge(kst("2026-11-21T10:00:00"), null, now))
+        assertEquals("12.14(월)까지", formatHeroPeriod(kst("2026-11-19T10:00:00"), kst("2026-12-14T22:00:00"), now))
+        assertEquals("오늘 17:00 – 22:00", formatHeroPeriod(kst("2026-11-20T17:00:00"), kst("2026-11-20T22:00:00"), now))
+    }
 }

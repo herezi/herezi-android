@@ -3,10 +3,12 @@ package com.herezi.app.di
 import android.content.Context
 import com.herezi.app.BuildConfig
 import com.herezi.app.location.AndroidLocationSource
+import com.herezi.app.location.AndroidReverseGeocoder
 import com.herezi.core.data.LocalStores
 import com.herezi.core.domain.AppPreferences
 import com.herezi.core.domain.LocationSource
 import com.herezi.core.domain.RecentSearchesRepository
+import com.herezi.core.domain.ReverseGeocoder
 import com.herezi.core.domain.SavedSpotsRepository
 import com.herezi.core.domain.SpotsRepository
 import com.herezi.core.domain.fake.FakeSpotsRepository
@@ -51,6 +53,10 @@ object DataModule {
     @Provides
     @Singleton
     fun locationSource(@ApplicationContext context: Context): LocationSource = AndroidLocationSource(context)
+
+    @Provides
+    @Singleton
+    fun reverseGeocoder(@ApplicationContext context: Context): ReverseGeocoder = AndroidReverseGeocoder(context)
 
     @Provides
     fun clock(): Clock = Clock.systemUTC()
