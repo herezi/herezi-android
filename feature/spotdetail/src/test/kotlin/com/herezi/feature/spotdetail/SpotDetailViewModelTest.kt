@@ -63,6 +63,8 @@ class SpotDetailViewModelTest {
 
         override suspend fun inBounds(query: MapQuery): MapSpots = error("x")
 
+        override suspend fun placeName(point: GeoPoint): String? = error("x")
+
         override suspend fun spot(id: String): Spot? = error("네트워크 오류")
     }
 

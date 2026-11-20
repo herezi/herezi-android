@@ -13,4 +13,10 @@ interface SpotsRepository {
 
     /** 상세. 없으면 null. 끝난 항목도 돌려주고 [Spot.isEnded] 로 표시한다. */
     suspend fun spot(id: String): Spot?
+
+    /**
+     * 서버 역지오코딩(`GET /v1/geo/reverse`)의 위치명, 예 "중구 태평로1가".
+     * 결과가 없거나(빈 label) 서버가 못 하면(501·502) null → [ServerFirstGeocoder] 가 OS 지오코더로 넘긴다.
+     */
+    suspend fun placeName(point: GeoPoint): String?
 }
