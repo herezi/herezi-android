@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.herezi.core.ui.BundledLicenses
 import com.herezi.core.ui.HereziLinks
 import com.herezi.core.ui.component.HereziToastHost
 import com.herezi.core.ui.theme.HereziSpace
@@ -57,6 +58,7 @@ fun SettingsRoute(
     appVersion: String,
     onBack: () -> Unit,
     onOpenSources: () -> Unit,
+    onOpenLicenses: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -74,6 +76,7 @@ fun SettingsRoute(
         onBack = onBack,
         onLocation = { openAppSettings(context) },
         onOpenSources = onOpenSources,
+        onOpenLicenses = onOpenLicenses,
         onOpenUrl = { openUrl(context, it) },
         onReport = {
             if (!sendReport(context, appVersion)) {
@@ -92,6 +95,7 @@ fun SettingsScreen(
     onLocation: () -> Unit,
     onOpenSources: () -> Unit,
     onOpenUrl: (String) -> Unit,
+    onOpenLicenses: () -> Unit = {},
     onReport: () -> Unit,
 ) {
     Scaffold(
@@ -106,6 +110,7 @@ fun SettingsScreen(
             SettingRow("정보 출처", onClick = onOpenSources)
             SettingRow("이용약관", hint = "브라우저가 열려요", onClick = { onOpenUrl(HereziLinks.TERMS) })
             SettingRow("개인정보 처리방침", hint = "브라우저가 열려요", onClick = { onOpenUrl(HereziLinks.PRIVACY) })
+            SettingRow("오픈소스 라이선스", onClick = onOpenLicenses)
             GroupTitle("도움")
             SettingRow("정보 오류 제보", hint = "메일 앱이 열려요", onClick = onReport)
             SelectionContainer {
@@ -151,6 +156,37 @@ fun SourcesScreen(onBack: () -> Unit) {
                 color = HereziTheme.colors.textSecondary,
                 modifier = Modifier.padding(horizontal = HereziSpace.s5, vertical = HereziSpace.s6),
             )
+        }
+    }
+}
+
+/** 오픈소스 라이선스 (S6 하위 화면). 번들한 에셋마다 이름·버전·라이선스와 원문 전체. */
+@Composable
+fun LicensesScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    Scaffold(containerColor = HereziTheme.colors.bgPrimary, topBar = { TitleBar("오픈소스 라이선스", onBack) }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+            BundledLicenses.forEach { item ->
+                val text = remember(item.textRes) {
+                    context.resources.openRawResource(item.textRes).bufferedReader().use { it.readText() }
+                }
+                GroupTitle("${item.name} ${item.version}")
+                SettingRow(
+                    item.license,
+                    icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                    hint = "브라우저가 열려요",
+                    onClick = { openUrl(context, item.url) },
+                )
+                SelectionContainer {
+                    Text(
+                        text,
+                        style = HereziTheme.typography.caption,
+                        color = HereziTheme.colors.textSecondary,
+                        modifier = Modifier.padding(horizontal = HereziSpace.s5, vertical = HereziSpace.s3),
+                    )
+                }
+            }
+            Spacer(Modifier.height(HereziSpace.s8))
         }
     }
 }

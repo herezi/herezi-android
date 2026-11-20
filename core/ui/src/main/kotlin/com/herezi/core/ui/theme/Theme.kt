@@ -9,9 +9,11 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.herezi.core.ui.R
 
 /** 글자 토큰. DESIGN.md §3 (`type.title2` → `title2`). 크기는 sp 라 글꼴 크기 설정을 따른다. */
 @Immutable
@@ -26,8 +28,18 @@ data class HereziTypography(
     val micro: TextStyle = style(FontWeight.SemiBold, size = 11, lineHeight = 14),
 )
 
-// Pretendard 대신 시스템 기본 산세리프를 쓴다 (폰트 번들은 추후 결정).
-private val Base = FontFamily.Default
+/**
+ * Pretendard v1.3.9 (SIL OFL 1.1, `res/raw/license_pretendard.txt`). DESIGN.md §3 의 네 굵기만 번들한다.
+ * 포스터 ExtraBold(800)는 가장 가까운 Bold 로 그린다.
+ */
+val Pretendard = FontFamily(
+    Font(R.font.pretendard_regular, FontWeight.Normal),
+    Font(R.font.pretendard_medium, FontWeight.Medium),
+    Font(R.font.pretendard_semibold, FontWeight.SemiBold),
+    Font(R.font.pretendard_bold, FontWeight.Bold),
+)
+
+private val Base = Pretendard
 
 private fun style(weight: FontWeight, size: Int, lineHeight: Int) =
     TextStyle(fontFamily = Base, fontWeight = weight, fontSize = size.sp, lineHeight = lineHeight.sp)
@@ -62,12 +74,18 @@ private fun materialColors(c: HereziColorScheme) = lightColorScheme(
 )
 
 private fun materialTypography(t: HereziTypography) = Typography(
+    displayLarge = t.display,
+    displayMedium = t.display,
+    displaySmall = t.display,
+    headlineLarge = t.title1,
     headlineMedium = t.display,
     headlineSmall = t.title1,
     titleLarge = t.title2,
     titleMedium = t.title3,
     bodyLarge = t.body,
     bodyMedium = t.body,
+    bodySmall = t.caption,
+    titleSmall = t.bodyStrong,
     labelLarge = t.title3,
     labelMedium = t.caption,
     labelSmall = t.micro,

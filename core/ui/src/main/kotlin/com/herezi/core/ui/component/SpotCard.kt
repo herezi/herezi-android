@@ -12,11 +12,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -32,6 +34,7 @@ import com.herezi.core.ui.formatDistance
 import com.herezi.core.ui.label
 import com.herezi.core.ui.spokenDistance
 import com.herezi.core.ui.spokenPeriod
+import com.herezi.core.ui.theme.HereziRadius
 import com.herezi.core.ui.theme.HereziSize
 import com.herezi.core.ui.theme.HereziSpace
 import com.herezi.core.ui.theme.HereziTheme
@@ -84,7 +87,7 @@ fun SpotCard(
         verticalAlignment = Alignment.Top,
     ) {
         leading?.invoke(this)
-        CategoryThumbnail(spot.category, iconSize = 28.dp, modifier = dim.size(HereziSize.thumb))
+        SpotImage(spot, modifier = dim.size(HereziSize.thumb).clip(RoundedCornerShape(HereziRadius.md)))
         Spacer(Modifier.width(HereziSpace.s3))
         Column(Modifier.weight(1f)) {
             Column(dim) {

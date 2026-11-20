@@ -42,6 +42,7 @@ import com.herezi.feature.nearby.NearbyViewModel
 import com.herezi.feature.onboarding.OnboardingRoute
 import com.herezi.feature.saved.SavedRoute
 import com.herezi.feature.search.SearchRoute
+import com.herezi.feature.settings.LicensesScreen
 import com.herezi.feature.settings.SettingsRoute
 import com.herezi.feature.settings.SourcesScreen
 import com.herezi.feature.spotdetail.SpotDetailRoute
@@ -60,6 +61,7 @@ private const val SEARCH = "search"
 private const val SAVED = "saved"
 private const val SETTINGS = "settings"
 private const val SOURCES = "settings/sources"
+private const val LICENSES = "settings/licenses"
 private val FilterArgs = "${NearbyViewModel.ARG_WHEN}={${NearbyViewModel.ARG_WHEN}}" +
     "&${NearbyViewModel.ARG_CATEGORY}={${NearbyViewModel.ARG_CATEGORY}}" +
     "&${NearbyViewModel.ARG_FREE}={${NearbyViewModel.ARG_FREE}}"
@@ -177,9 +179,11 @@ private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
                     appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
                     onBack = { nav.popBackStack() },
                     onOpenSources = { nav.navigate(SOURCES) },
+                    onOpenLicenses = { nav.navigate(LICENSES) },
                 )
             }
             composable(SOURCES) { SourcesScreen(onBack = { nav.popBackStack() }) }
+            composable(LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }
             spotDetail(nav, Tab.SAVED)
         }
     }

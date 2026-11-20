@@ -8,6 +8,9 @@ object HereziLinks {
     /** 공유 링크. 도메인 미구매라 텍스트 공유에만 쓴다. */
     fun share(spotId: String): String = "https://herezi.com/s/$spotId"
 
-    const val TERMS = "https://herezi.com/terms"
-    const val PRIVACY = "https://herezi.com/privacy"
+    /** 이용약관. 임시로 GitHub Pages, 도메인 구매 후 교체 (#14). */
+    const val TERMS = "https://herezi.github.io/terms/"
+
+    /** 개인정보 처리방침. 임시로 GitHub Pages, 도메인 구매 후 교체 (#14). */
+    const val PRIVACY = "https://herezi.github.io/privacy/"
 }

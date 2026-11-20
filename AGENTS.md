@@ -38,7 +38,7 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 | `:core:domain` | 순수 Kotlin. `Spot`, `Category`(9종), `When`, `SpotQuery`(`keyword`=검색 `q`), 포트 `SpotsRepository`·`SavedSpotsRepository`·`RecentSearchesRepository`·`AppPreferences`·`LocationSource`, Fake들(`fake/`) |
 | `:core:data` | 기기 로컬 저장(DataStore + JSON): 저장 목록 스냅샷, 최근 검색, S0 노출 여부 |
 | `:core:network` | `HereziApi`(Retrofit), DTO(계약 그대로 snake_case), `toDomain()` 매핑, `LiveSpotsRepository` |
-| `:core:ui` | DESIGN.md 토큰(`HereziTheme.colors`/`typography`, `HereziSpace`·`Radius`·`Motion` 등, 카테고리 색·아이콘), 공통 컴포넌트(`SpotCard`·배지·버튼·상태 화면·토스트), 한국어 문구·포맷 |
+| `:core:ui` | DESIGN.md 토큰(`HereziTheme.colors`/`typography`, `HereziSpace`·`Radius`·`Motion` 등, 카테고리 색·아이콘), 공통 컴포넌트(`SpotCard`·배지·버튼·상태 화면·토스트), 이미지 로더(`RemoteImage`·`HereziImageLoader`, 라이브러리 없음), Pretendard 글꼴(`res/font`, OFL 원문 `res/raw`), 한국어 문구·포맷 |
 | `:core:map` | `SpotMap` 컴포저블 — 네이버 지도 SDK를 쓰는 **유일한** 모듈. `LocalMapConfig`로 키 유무 전달 |
 | `:feature:home` | S1 홈 사진 카드 피드 (`HomeFeedBuilder` 섹션은 `:core:domain` 의 순수 함수) |
 | `:feature:nearby` | S1b 전체 목록(시작 필터·페이지) + 지도 탭(S2 자리) + `NearbyViewModel` |
