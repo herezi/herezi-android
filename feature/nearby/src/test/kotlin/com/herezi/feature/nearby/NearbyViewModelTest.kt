@@ -9,6 +9,7 @@ import com.herezi.core.domain.SpotPage
 import com.herezi.core.domain.SpotQuery
 import com.herezi.core.domain.SpotsRepository
 import com.herezi.core.domain.When
+import com.herezi.core.domain.fake.FakeLocationSource
 import com.herezi.core.domain.fake.FakeSpotsRepository
 import java.time.Clock
 import java.time.Instant
@@ -56,7 +57,7 @@ class NearbyViewModelTest {
     @Test
     fun `처음에는 지금 필터로 서울시청 근처를 불러온다`() = runTest(dispatcher) {
         val repo = RecordingRepository(FakeSpotsRepository(clock))
-        val vm = NearbyViewModel(repo)
+        val vm = NearbyViewModel(repo, FakeLocationSource())
         advanceUntilIdle()
 
         val state = vm.state.value
@@ -70,7 +71,7 @@ class NearbyViewModelTest {
     @Test
     fun `카테고리 토글과 무료 필터가 쿼리에 반영된다`() = runTest(dispatcher) {
         val repo = RecordingRepository(FakeSpotsRepository(clock))
-        val vm = NearbyViewModel(repo)
+        val vm = NearbyViewModel(repo, FakeLocationSource())
 
         vm.toggleCategory(Category.FESTIVAL)
         vm.setFreeOnly(true)
@@ -89,7 +90,7 @@ class NearbyViewModelTest {
     @Test
     fun `기간을 바꾸면 다시 불러오고 같은 값이면 요청하지 않는다`() = runTest(dispatcher) {
         val repo = RecordingRepository(FakeSpotsRepository(clock))
-        val vm = NearbyViewModel(repo)
+        val vm = NearbyViewModel(repo, FakeLocationSource())
         advanceUntilIdle()
 
         vm.setPeriod(When.NOW)
@@ -103,9 +104,29 @@ class NearbyViewModelTest {
     }
 
     @Test
+    fun `위치를 알면 그 기준으로 부르고, 돌아왔을 때 같으면 다시 부르지 않는다`() = runTest(dispatcher) {
+        val repo = RecordingRepository(FakeSpotsRepository(clock))
+        val location = FakeLocationSource()
+        val vm = NearbyViewModel(repo, location)
+        advanceUntilIdle()
+        assertTrue(vm.state.value.locationOff)
+
+        vm.refreshLocation()
+        advanceUntilIdle()
+        assertEquals(1, repo.queries.size)
+
+        location.location = GeoPoint(37.57, 126.98)
+        vm.refreshLocation()
+        advanceUntilIdle()
+        assertEquals(2, repo.queries.size)
+        assertEquals(GeoPoint(37.57, 126.98), repo.queries.last().center)
+        assertFalse(vm.state.value.locationOff)
+    }
+
+    @Test
     fun `필터 초기화는 기본 필터로 돌리고 다시 불러온다`() = runTest(dispatcher) {
         val repo = RecordingRepository(FakeSpotsRepository(clock))
-        val vm = NearbyViewModel(repo)
+        val vm = NearbyViewModel(repo, FakeLocationSource())
         vm.toggleCategory(Category.PET)
         vm.setPeriod(When.WEEK)
         advanceUntilIdle()
@@ -131,7 +152,7 @@ class NearbyViewModelTest {
 
                 override suspend fun spot(id: String): Spot? = null
             }
-        val vm = NearbyViewModel(repo)
+        val vm = NearbyViewModel(repo, FakeLocationSource())
         advanceUntilIdle()
         assertEquals("네트워크 오류", vm.state.value.error)
 

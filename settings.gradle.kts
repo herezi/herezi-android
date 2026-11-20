@@ -21,9 +21,14 @@ dependencyResolutionManagement {
 rootProject.name = "herezi-android"
 
 include(":app")
+include(":core:data")
 include(":core:domain")
 include(":core:map")
 include(":core:network")
 include(":core:ui")
 include(":feature:nearby")
+include(":feature:onboarding")
+include(":feature:saved")
+include(":feature:search")
+include(":feature:settings")
 include(":feature:spotdetail")

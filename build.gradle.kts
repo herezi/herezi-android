@@ -109,6 +109,7 @@ subprojects {
 // ---------------------------------------------------------------------------
 val allowedProjectDeps: Map<String, Set<String>> =
     mapOf(
+        ":core:data" to setOf(":core:domain"),
         ":core:domain" to emptySet(),
         ":core:map" to setOf(":core:domain"),
         ":core:network" to setOf(":core:domain"),
