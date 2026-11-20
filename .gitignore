@@ -1,0 +1,27 @@
+# Gradle / 빌드 산출물
+.gradle/
+build/
+.kotlin/
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.hprof
+
+# 로컬 설정·비밀값 — 절대 커밋하지 않는다
+local.properties
+secrets.properties
+*.keystore
+*.jks
+google-services.json
+.env
+.env.*
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+.externalNativeBuild/
+.cxx/
+.navigation/
