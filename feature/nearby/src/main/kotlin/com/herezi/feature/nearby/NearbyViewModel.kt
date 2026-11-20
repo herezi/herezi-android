@@ -38,8 +38,6 @@ data class NearbyUiState(
     val nextCursor: String? = null,
     val loadingMore: Boolean = false,
     val moreFailed: Boolean = false,
-    /** 지도 탭(S2)으로 쓰일 때 true. */
-    val showMap: Boolean = false,
 ) {
     val hasMore: Boolean get() = nextCursor != null
 
@@ -60,9 +58,10 @@ constructor(
     private val location: LocationSource,
     private val geocoder: ReverseGeocoder,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(
-        NearbyUiState(filter = filterFrom(savedStateHandle), showMap = savedStateHandle.get<Boolean>(ARG_MAP) == true),
-    )
+    private val _state = MutableStateFlow(NearbyUiState(filter = filterFrom(savedStateHandle)))
+
+    /** 지도에서 다른 동네로 옮겨 다시 찾은 뒤 '목록으로 보기'로 왔으면 그 지도 중심(S2). */
+    private val pinnedCenter: GeoPoint? = centerFrom(savedStateHandle)
     val state: StateFlow<NearbyUiState> = _state.asStateFlow()
 
     private var loadJob: Job? = null
@@ -72,16 +71,18 @@ constructor(
         refreshLocation()
     }
 
-    /** 위치를 다시 읽고, 바뀌었거나 처음이면 다시 불러온다. */
+    /** 위치를 다시 읽고, 바뀌었거나 처음이면 다시 불러온다. 지도 중심을 받았으면 그 기준. */
     fun refreshLocation() {
         viewModelScope.launch {
             val origin = location.origin()
+            val center = pinnedCenter ?: origin.point
             val before = _state.value
-            if (loadedOnce && before.center == origin.point && before.locationOff == !origin.known) return@launch
+            if (loadedOnce && before.center == center && before.locationOff == !origin.known) return@launch
             loadedOnce = true
-            _state.update { it.copy(center = origin.point, locationOff = !origin.known) }
+            _state.update { it.copy(center = center, locationOff = !origin.known) }
             load()
-            val name = if (origin.known) geocoder.placeName(origin.point) ?: NAME_UNKNOWN else NAME_CITY_HALL
+            val named = pinnedCenter != null || origin.known
+            val name = if (named) geocoder.placeName(center) ?: NAME_UNKNOWN else NAME_CITY_HALL
             _state.update { it.copy(locationName = name) }
         }
     }
@@ -162,7 +163,8 @@ constructor(
         const val ARG_WHEN = "when"
         const val ARG_CATEGORY = "category"
         const val ARG_FREE = "free"
-        const val ARG_MAP = "map"
+        const val ARG_LAT = "lat"
+        const val ARG_LNG = "lng"
 
         const val NAME_UNKNOWN = "내 주변"
         const val NAME_CITY_HALL = "서울시청 주변"
@@ -173,5 +175,12 @@ constructor(
             categories = handle.get<String>(ARG_CATEGORY).orEmpty().split(",").mapNotNull(Category::fromCode).toSet(),
             freeOnly = handle.get<Boolean>(ARG_FREE) == true,
         )
+
+        /** 내비게이션 인자 → 목록 기준 위치. 없거나 숫자가 아니면 null(내 위치). */
+        fun centerFrom(handle: SavedStateHandle): GeoPoint? {
+            val lat = handle.get<String>(ARG_LAT)?.toDoubleOrNull() ?: return null
+            val lng = handle.get<String>(ARG_LNG)?.toDoubleOrNull() ?: return null
+            return GeoPoint(lat, lng)
+        }
     }
 }

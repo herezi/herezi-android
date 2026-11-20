@@ -47,6 +47,22 @@ class ContractTest {
     }
 
     @Test
+    fun `GeoReverseDto 필수 필드가 계약 GeoReverse 의 required 와 같다`() {
+        assertEquals(requiredOf("GeoReverse"), requiredOf(GeoReverseDto.serializer().descriptor))
+    }
+
+    @Test
+    fun `역지오코딩 경로와 lat lng 파라미터, 폴백 응답 코드가 계약에 있다`() {
+        val start = spec.indexOf("  /v1/geo/reverse:")
+        assertTrue("/v1/geo/reverse 경로가 없다", start >= 0)
+        val end = spec.indexOf("\ncomponents:", start)
+        val section = spec.substring(start, if (end < 0) spec.length else end)
+        listOf("name: lat", "name: lng", "GeoReverse", "\"501\"", "\"502\"").forEach {
+            assertTrue("$it 가 없다", section.contains(it))
+        }
+    }
+
+    @Test
     fun `지도 bbox 경로와 파라미터가 계약에 있다`() {
         val start = spec.indexOf("  /v1/spots/map:")
         assertTrue("/v1/spots/map 경로가 없다", start >= 0)

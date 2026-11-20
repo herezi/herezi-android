@@ -28,7 +28,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.HorizontalDivider
@@ -44,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
@@ -62,7 +62,6 @@ import com.herezi.core.domain.Category
 import com.herezi.core.domain.ListFilter
 import com.herezi.core.domain.SpotQuery
 import com.herezi.core.domain.When
-import com.herezi.core.map.SpotMap
 import com.herezi.core.ui.component.EmptyIcon
 import com.herezi.core.ui.component.ErrorState
 import com.herezi.core.ui.component.FilterPill
@@ -149,31 +148,22 @@ fun NearbyScreen(state: NearbyUiState, actions: NearbyActions) {
     LoadMoreEffect(list, state, actions.onLoadMore)
     Box(Modifier.fillMaxSize().background(HereziTheme.colors.bgPrimary)) {
         Column(Modifier.fillMaxSize()) {
-            TopBar(state.locationName, actions)
-            if (state.showMap) {
-                WhenTabs(state.filter.period, actions.onPeriod)
-                ChipRow(state.filter, actions)
-                if (state.locationOff) Banner(actions)
-                Box(Modifier.weight(1f)) {
-                    SpotMap(spots = state.spots, center = state.center, onSpotClick = actions.onSpotClick)
-                }
-            } else {
-                LazyColumn(Modifier.weight(1f), state = list, contentPadding = PaddingValues(bottom = 88.dp)) {
-                    item(key = "when") { WhenTabs(state.filter.period, actions.onPeriod) }
-                    stickyHeader(key = "chips") {
-                        Column(Modifier.background(HereziTheme.colors.bgPrimary)) {
-                            ChipRow(state.filter, actions)
-                            if (list.firstVisibleItemIndex >= 1) HorizontalDivider(color = HereziTheme.colors.border)
-                        }
+            TopBar(state.locationName, actions.onBack, actions.onSearch)
+            LazyColumn(Modifier.weight(1f), state = list, contentPadding = PaddingValues(bottom = 88.dp)) {
+                item(key = "when") { WhenTabs(state.filter.period, actions.onPeriod) }
+                stickyHeader(key = "chips") {
+                    Column(Modifier.background(HereziTheme.colors.bgPrimary)) {
+                        ChipRow(state.filter, actions.onFreeOnly, actions.onAllCategories, actions.onToggleCategory)
+                        if (list.firstVisibleItemIndex >= 1) HorizontalDivider(color = HereziTheme.colors.border)
                     }
-                    if (state.locationOff) item(key = "banner") { Banner(actions) }
-                    listBody(state, actions)
                 }
+                if (state.locationOff) item(key = "banner") { Banner(actions.onLocationSettings) }
+                listBody(state, actions)
             }
         }
         FloatingPill(
-            text = if (state.showMap) "목록으로 보기" else "지도로 보기",
-            map = !state.showMap,
+            text = "지도로 보기",
+            icon = Icons.Rounded.Map,
             onClick = actions.onSwitchView,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = HereziSpace.s4),
         )
@@ -240,12 +230,12 @@ private fun LoadMoreEffect(list: LazyListState, state: NearbyUiState, onLoadMore
 }
 
 @Composable
-private fun TopBar(locationName: String?, actions: NearbyActions) {
+internal fun TopBar(locationName: String?, onBack: (() -> Unit)?, onSearch: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = HereziSpace.s1),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val back = actions.onBack
+        val back = onBack
         if (back != null) {
             IconButton(onClick = back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "뒤로") }
         } else {
@@ -268,7 +258,7 @@ private fun TopBar(locationName: String?, actions: NearbyActions) {
                 )
             }
         }
-        IconButton(onClick = actions.onSearch) {
+        IconButton(onClick = onSearch) {
             Icon(Icons.Rounded.Search, "검색", tint = HereziTheme.colors.iconPrimary)
         }
     }
@@ -276,7 +266,7 @@ private fun TopBar(locationName: String?, actions: NearbyActions) {
 
 /** 기간 탭 (DESIGN.md §6.3): 큰 글자 탭, 선택 = text.primary Bold, 비선택 = text.tertiary. */
 @Composable
-private fun WhenTabs(selected: When, onSelect: (When) -> Unit) {
+internal fun WhenTabs(selected: When, onSelect: (When) -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = HereziSpace.s5).heightIn(min = 44.dp).selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(HereziSpace.s5),
@@ -300,21 +290,26 @@ private fun WhenTabs(selected: When, onSelect: (When) -> Unit) {
 
 /** 칩 줄 (DESIGN.md §6.2): 무료만 │ 전체 · 카테고리 9종. 홈 카테고리 줄과 같은 [FilterPill]. */
 @Composable
-private fun ChipRow(filter: ListFilter, actions: NearbyActions) {
+internal fun ChipRow(
+    filter: ListFilter,
+    onFreeOnly: (Boolean) -> Unit,
+    onAllCategories: () -> Unit,
+    onToggleCategory: (Category) -> Unit,
+) {
     LazyRow(
         Modifier.padding(top = HereziSpace.s2, bottom = HereziSpace.s3),
         contentPadding = PaddingValues(horizontal = HereziSpace.s5),
         horizontalArrangement = Arrangement.spacedBy(HereziSpace.s2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        item { FilterPill("무료만", filter.freeOnly, onClick = { actions.onFreeOnly(!filter.freeOnly) }, check = true) }
+        item { FilterPill("무료만", filter.freeOnly, onClick = { onFreeOnly(!filter.freeOnly) }, check = true) }
         item { Box(Modifier.width(1.dp).height(16.dp).background(HereziTheme.colors.border)) }
-        item { FilterPill("전체", filter.categories.isEmpty(), onClick = actions.onAllCategories) }
+        item { FilterPill("전체", filter.categories.isEmpty(), onClick = onAllCategories) }
         items(Category.entries) { category ->
             FilterPill(
                 category.label,
                 category in filter.categories,
-                onClick = { actions.onToggleCategory(category) },
+                onClick = { onToggleCategory(category) },
                 dot = category.color,
             )
         }
@@ -322,8 +317,8 @@ private fun ChipRow(filter: ListFilter, actions: NearbyActions) {
 }
 
 @Composable
-private fun Banner(actions: NearbyActions) {
-    LocationBanner("설정", onAction = actions.onLocationSettings, modifier = Modifier.padding(bottom = HereziSpace.s3))
+internal fun Banner(onSettings: () -> Unit, modifier: Modifier = Modifier) {
+    LocationBanner("설정", onAction = onSettings, modifier = modifier.padding(bottom = HereziSpace.s3))
 }
 
 @Composable
@@ -364,14 +359,24 @@ private fun ListEnd(state: NearbyUiState, onRetry: () -> Unit) {
     }
 }
 
-/** 플로팅 알약 (DESIGN.md §6.10): 높이 44, 잉크, 흰 caption Bold + 아이콘 16, elevation.1. */
+/**
+ * 플로팅 알약 (DESIGN.md §6.10): 높이 44, 잉크, 흰 caption Bold + 아이콘 16, elevation.1.
+ * [inverse] 가 false 면 흰 배경·잉크 글자 변형("이 지역에서 다시 찾기").
+ */
 @Composable
-private fun FloatingPill(text: String, map: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun FloatingPill(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    inverse: Boolean = true,
+    iconModifier: Modifier = Modifier,
+) {
     androidx.compose.material3.Surface(
         onClick = onClick,
         shape = RoundedCornerShape(HereziRadius.full),
-        color = HereziTheme.colors.bgInverse,
-        contentColor = HereziTheme.colors.textInverse,
+        color = if (inverse) HereziTheme.colors.bgInverse else HereziTheme.colors.bgPrimary,
+        contentColor = if (inverse) HereziTheme.colors.textInverse else HereziTheme.colors.textPrimary,
         shadowElevation = HereziElevation.e1,
         modifier = modifier.heightIn(min = 44.dp),
     ) {
@@ -379,11 +384,7 @@ private fun FloatingPill(text: String, map: Boolean, onClick: () -> Unit, modifi
             Modifier.padding(horizontal = HereziSpace.s4, vertical = HereziSpace.s3),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                if (map) Icons.Rounded.Map else Icons.AutoMirrored.Rounded.FormatListBulleted,
-                null,
-                modifier = Modifier.size(16.dp),
-            )
+            Icon(icon, null, modifier = iconModifier.size(16.dp))
             Spacer(Modifier.width(HereziSpace.s1))
             Text(text, style = HereziTheme.typography.caption.copy(fontWeight = FontWeight.Bold))
         }

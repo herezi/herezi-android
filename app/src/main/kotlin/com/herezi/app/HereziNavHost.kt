@@ -37,6 +37,7 @@ import com.herezi.core.domain.ListFilter
 import com.herezi.core.ui.theme.HereziColors
 import com.herezi.core.ui.theme.HereziTheme
 import com.herezi.feature.home.HomeRoute
+import com.herezi.feature.nearby.MapRoute
 import com.herezi.feature.nearby.NearbyRoute
 import com.herezi.feature.nearby.NearbyViewModel
 import com.herezi.feature.onboarding.OnboardingRoute
@@ -65,8 +66,9 @@ private const val LICENSES = "settings/licenses"
 private val FilterArgs = "${NearbyViewModel.ARG_WHEN}={${NearbyViewModel.ARG_WHEN}}" +
     "&${NearbyViewModel.ARG_CATEGORY}={${NearbyViewModel.ARG_CATEGORY}}" +
     "&${NearbyViewModel.ARG_FREE}={${NearbyViewModel.ARG_FREE}}"
-private val LIST = "list?$FilterArgs"
-private val MAP = "map?$FilterArgs&${NearbyViewModel.ARG_MAP}={${NearbyViewModel.ARG_MAP}}"
+private val LIST = "list?$FilterArgs" +
+    "&${NearbyViewModel.ARG_LAT}={${NearbyViewModel.ARG_LAT}}&${NearbyViewModel.ARG_LNG}={${NearbyViewModel.ARG_LNG}}"
+private val MAP = "map?$FilterArgs"
 
 private fun ListFilter.query(): String = "${NearbyViewModel.ARG_WHEN}=${period.code}" +
     "&${NearbyViewModel.ARG_CATEGORY}=${categories.joinToString(",") { it.code }}" +
@@ -133,13 +135,13 @@ private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
                     onLocationSettings = { openAppSettings(context) },
                 )
             }
-            composable(LIST, arguments = filterArguments()) {
+            composable(LIST, arguments = filterArguments() + centerArguments()) {
                 NearbyRoute(
                     onSpotClick = { nav.openSpot(Tab.NEARBY, it) },
                     onSearch = { nav.navigate(SEARCH) },
                     onSwitchView = { filter ->
                         // 지도 탭을 이 필터로 새로 연다.
-                        nav.navigate("map?${filter.query()}&${NearbyViewModel.ARG_MAP}=true") {
+                        nav.navigate("map?${filter.query()}") {
                             popUpTo(Tab.NEARBY.graph) { saveState = true }
                             launchSingleTop = true
                         }
@@ -153,15 +155,18 @@ private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
             spotDetail(nav, Tab.NEARBY)
         }
         navigation(route = Tab.MAP.graph, startDestination = MAP) {
-            composable(MAP, arguments = filterArguments(map = true)) {
-                NearbyRoute(
+            composable(MAP, arguments = filterArguments()) {
+                MapRoute(
                     onSpotClick = { nav.openSpot(Tab.MAP, it) },
                     onSearch = { nav.navigate(SEARCH) },
-                    onSwitchView = { filter ->
+                    onOpenList = { filter, center ->
+                        // 주변 탭으로 바꾸고 S1b 를 지금 필터(와 옮겨 찾은 지도 중심)로 연다.
                         nav.switchTab(Tab.NEARBY)
-                        nav.navigate("list?${filter.query()}")
+                        val at = center?.let {
+                            "&${NearbyViewModel.ARG_LAT}=${it.lat}&${NearbyViewModel.ARG_LNG}=${it.lng}"
+                        }.orEmpty()
+                        nav.navigate("list?${filter.query()}$at")
                     },
-                    onBack = null,
                 )
             }
             spotDetail(nav, Tab.MAP)
@@ -189,7 +194,7 @@ private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
     }
 }
 
-private fun filterArguments(map: Boolean = false) = listOf(
+private fun filterArguments() = listOf(
     navArgument(NearbyViewModel.ARG_WHEN) {
         type = NavType.StringType
         defaultValue = "now"
@@ -202,11 +207,15 @@ private fun filterArguments(map: Boolean = false) = listOf(
         type = NavType.BoolType
         defaultValue = false
     },
-    navArgument(NearbyViewModel.ARG_MAP) {
-        type = NavType.BoolType
-        defaultValue = map
-    },
 )
+
+/** 지도에서 옮겨 찾은 중심(S2 → S1b). 비어 있으면 내 위치. */
+private fun centerArguments() = listOf(NearbyViewModel.ARG_LAT, NearbyViewModel.ARG_LNG).map { name ->
+    navArgument(name) {
+        type = NavType.StringType
+        defaultValue = ""
+    }
+}
 
 /** 상세는 탭마다 같은 탭 안에 쌓는다(탭을 바꿔도 각 탭 백스택 유지). */
 private fun NavGraphBuilder.spotDetail(nav: NavHostController, tab: Tab) {

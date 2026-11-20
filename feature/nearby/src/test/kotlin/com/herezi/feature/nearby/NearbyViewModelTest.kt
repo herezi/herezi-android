@@ -89,14 +89,29 @@ class NearbyViewModelTest {
     @Test
     fun `내비게이션 인자로 시작 필터를 받는다`() = runTest(dispatcher) {
         val repo = RecordingRepository(FakeSpotsRepository(clock))
-        val vm = vm(repo, mapOf("when" to "week", "category" to "nature,pet", "free" to true, "map" to true))
+        val vm = vm(repo, mapOf("when" to "week", "category" to "nature,pet", "free" to true))
         advanceUntilIdle()
         val q = repo.queries.single()
         assertEquals(When.WEEK, q.period)
         assertEquals(setOf(Category.NATURE, Category.PET), q.categories)
         assertTrue(q.freeOnly)
-        assertTrue(vm.state.value.showMap)
         assertTrue(vm.state.value.filtered)
+    }
+
+    @Test
+    fun `지도에서 넘겨받은 중심이 있으면 그 기준으로 부르고 그 동네 이름을 쓴다`() = runTest(dispatcher) {
+        val repo = RecordingRepository(FakeSpotsRepository(clock))
+        val vm = vm(
+            repo,
+            mapOf("lat" to "37.5446", "lng" to "127.0557"),
+            location = FakeLocationSource(),
+            geocoder = FakeReverseGeocoder("성동구 성수동2가"),
+        )
+        advanceUntilIdle()
+        assertEquals(GeoPoint(37.5446, 127.0557), repo.queries.single().center)
+        assertEquals("성동구 성수동2가", vm.state.value.locationName)
+        // 위치 권한은 여전히 없으니 배너는 그대로.
+        assertTrue(vm.state.value.locationOff)
     }
 
     @Test
