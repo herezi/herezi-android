@@ -89,3 +89,6 @@ HEREZI_API_BASE_URL=
 6. 문서·주석은 한국어, 식별자는 영어. 커밋 메시지는 한국어 conventional 스타일(`feat: …`, `chore: …`).
 7. 비밀값(`local.properties`, 키, keystore)과 빌드 산출물은 커밋하지 않는다. 파일은 명시적으로 `git add`한다.
 8. 테스트: ViewModel은 Fake 저장소로, 매핑·쿼리는 MockWebServer로 단위 테스트한다. 새 로직에는 테스트를 같이 넣는다.
+
+## 에이전트 역할
+역할별 지침은 [`agents/`](agents/README.md)에 있다(기획자·디자이너·리뷰어·QA·개발자). 어떤 LLM 도구든 역할을 맡으면 해당 파일(`agents/<역할>.md`)을 먼저 읽고 따른다. Claude Code는 `.claude/agents` 링크로 자동 인식한다.
