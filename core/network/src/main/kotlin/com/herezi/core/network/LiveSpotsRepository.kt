@@ -19,6 +19,7 @@ class LiveSpotsRepository(private val api: HereziApi) : SpotsRepository {
             category = query.categories.toCategoryParam(),
             period = query.period.code,
             free = if (query.freeOnly) true else null,
+            keyword = query.keyword?.trim()?.takeIf { it.isNotEmpty() },
             cursor = query.cursor,
             limit = query.limit,
         ).toDomain()
