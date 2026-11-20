@@ -18,4 +18,14 @@ class LabelsTest {
         assertEquals("4.1 ~ 4.7", formatPeriod(start, end))
         assertEquals("4.1 ~", formatPeriod(start, null))
     }
+
+    @Test
+    fun `상대 시간은 방금, 분, 시간, 일 단위로 보여준다`() {
+        val now = Instant.parse("2027-04-01T12:00:00Z")
+        assertEquals("방금", formatRelativeTime(now.minusSeconds(30), now))
+        assertEquals("방금", formatRelativeTime(now.plusSeconds(60), now))
+        assertEquals("5분 전", formatRelativeTime(now.minusSeconds(5 * 60), now))
+        assertEquals("3시간 전", formatRelativeTime(now.minusSeconds(3 * 3600 + 59 * 60), now))
+        assertEquals("2일 전", formatRelativeTime(now.minusSeconds(2 * 86_400 + 3600), now))
+    }
 }

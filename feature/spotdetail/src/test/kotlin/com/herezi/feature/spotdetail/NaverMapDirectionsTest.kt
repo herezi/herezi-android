@@ -16,6 +16,7 @@ class NaverMapDirectionsTest {
             location = GeoPoint(37.5285, 126.9227),
             startsAt = Instant.EPOCH,
             source = "fake",
+            fetchedAt = Instant.EPOCH,
             placeName = "여의서로 벚꽃길",
         )
 

@@ -1,15 +1,20 @@
 package com.herezi.core.network
 
 import com.herezi.core.domain.Category
+import com.herezi.core.domain.GeoBounds
 import com.herezi.core.domain.GeoPoint
+import com.herezi.core.domain.MapQuery
 import com.herezi.core.domain.SpotQuery
 import com.herezi.core.domain.When
+import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -64,5 +69,65 @@ class LiveSpotsRepositoryTest {
     fun `상세 404는 null`() = runTest {
         server.enqueue(MockResponse().setResponseCode(404).setBody("""{"code":"not_found","message":"없음"}"""))
         assertNull(repo.spot("nope"))
+    }
+
+    @Test
+    fun `지도 영역과 필터를 계약대로 쿼리에 싣고 응답을 옮긴다`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"items":[$SPOT_JSON],"truncated":true}"""))
+
+        val result =
+            repo.inBounds(
+                MapQuery(
+                    bounds = GeoBounds(sw = GeoPoint(37.5, 126.9), ne = GeoPoint(37.6, 127.1)),
+                    categories = setOf(Category.POPUP, Category.FESTIVAL),
+                    period = When.TODAY,
+                    freeOnly = true,
+                ),
+            )
+
+        val url = server.takeRequest().requestUrl!!
+        assertEquals("/v1/spots/map", url.encodedPath)
+        assertEquals("37.5", url.queryParameter("sw_lat"))
+        assertEquals("126.9", url.queryParameter("sw_lng"))
+        assertEquals("37.6", url.queryParameter("ne_lat"))
+        assertEquals("127.1", url.queryParameter("ne_lng"))
+        assertEquals("festival,popup", url.queryParameter("category"))
+        assertEquals("today", url.queryParameter("when"))
+        assertEquals("true", url.queryParameter("free"))
+        assertEquals("200", url.queryParameter("limit"))
+        assertTrue(result.truncated)
+        assertEquals(listOf("tourapi:1"), result.items.map { it.id })
+    }
+
+    @Test
+    fun `지도 필터가 없으면 category와 free를 보내지 않는다`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"items":[],"truncated":false}"""))
+
+        val result = repo.inBounds(MapQuery(GeoBounds(sw = GeoPoint(37.5, 126.9), ne = GeoPoint(37.6, 127.1))))
+
+        val url = server.takeRequest().requestUrl!!
+        assertNull(url.queryParameter("category"))
+        assertNull(url.queryParameter("free"))
+        assertEquals("now", url.queryParameter("when"))
+        assertFalse(result.truncated)
+        assertTrue(result.items.isEmpty())
+    }
+
+    @Test
+    fun `끝난 상세는 200으로 받아 isEnded 와 갱신 시각을 채운다`() = runTest {
+        server.enqueue(MockResponse().setBody(SPOT_JSON.replace("\"is_ended\":false", "\"is_ended\":true")))
+
+        val spot = repo.spot("tourapi:1")!!
+
+        assertEquals("/v1/spots/tourapi:1", server.takeRequest().requestUrl!!.encodedPath)
+        assertTrue(spot.isEnded)
+        assertEquals(Instant.parse("2027-04-01T00:00:00Z"), spot.fetchedAt)
+    }
+
+    private companion object {
+        const val SPOT_JSON =
+            """{"id":"tourapi:1","title":"t","category":"popup","lat":37.55,"lng":127.0,""" +
+                """"starts_at":"2027-03-01T00:00:00Z","source":"tourapi",""" +
+                """"fetched_at":"2027-04-01T00:00:00Z","is_ended":false}"""
     }
 }

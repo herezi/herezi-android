@@ -2,6 +2,8 @@ package com.herezi.core.domain.fake
 
 import com.herezi.core.domain.Category
 import com.herezi.core.domain.GeoPoint
+import com.herezi.core.domain.MapQuery
+import com.herezi.core.domain.MapSpots
 import com.herezi.core.domain.Spot
 import com.herezi.core.domain.SpotPage
 import com.herezi.core.domain.SpotQuery
@@ -28,15 +30,8 @@ class FakeSpotsRepository(
     private val all: List<Spot> = spots ?: seedSpots(clock.instant())
 
     override suspend fun nearby(query: SpotQuery): SpotPage {
-        val now = clock.instant()
-        val (windowStart, windowEnd) = window(query.period, now)
         val items =
-            all
-                .asSequence()
-                .filter { it.endsAt == null || it.endsAt >= now }
-                .filter { query.categories.isEmpty() || it.category in query.categories }
-                .filter { !query.freeOnly || it.isFree }
-                .filter { it.startsAt <= windowEnd && (it.endsAt ?: Instant.MAX) >= windowStart }
+            visible(query.categories, query.period, query.freeOnly)
                 .map { it to query.center.distanceTo(it.location) }
                 .filter { (_, distance) -> distance <= query.radiusM }
                 .sortedBy { (_, distance) -> distance }
@@ -46,7 +41,33 @@ class FakeSpotsRepository(
         return SpotPage(items = items)
     }
 
-    override suspend fun spot(id: String): Spot? = all.firstOrNull { it.id == id }
+    override suspend fun inBounds(query: MapQuery): MapSpots {
+        val center = query.bounds.center
+        val inside =
+            visible(query.categories, query.period, query.freeOnly)
+                .filter { it.location in query.bounds }
+                .sortedBy { center.distanceTo(it.location) }
+                .toList()
+        return MapSpots(items = inside.take(query.limit), truncated = inside.size > query.limit)
+    }
+
+    /** 끝난 항목도 돌려주되 [Spot.isEnded] 를 지금 기준으로 채운다(서버와 같음). */
+    override suspend fun spot(id: String): Spot? {
+        val now = clock.instant()
+        return all.firstOrNull { it.id == id }?.let { it.copy(isEnded = it.endsAt != null && it.endsAt < now) }
+    }
+
+    /** 목록·지도 공통 필터. 끝난 항목은 절대 나오지 않는다. */
+    private fun visible(categories: Set<Category>, period: When, freeOnly: Boolean): Sequence<Spot> {
+        val now = clock.instant()
+        val (windowStart, windowEnd) = window(period, now)
+        return all
+            .asSequence()
+            .filter { it.endsAt == null || it.endsAt >= now }
+            .filter { categories.isEmpty() || it.category in categories }
+            .filter { !freeOnly || it.isFree }
+            .filter { it.startsAt <= windowEnd && (it.endsAt ?: Instant.MAX) >= windowStart }
+    }
 
     /** 기간 필터를 [시작, 끝] 시간 창으로 바꾼다. 항목 기간이 이 창과 겹치면 포함. */
     private fun window(period: When, now: Instant): Pair<Instant, Instant> {
@@ -67,10 +88,14 @@ class FakeSpotsRepository(
     companion object {
         val SEOUL: ZoneId = ZoneId.of("Asia/Seoul")
 
+        /** 끝난 시드 항목의 id. 상세로만 열린다. */
+        const val ENDED_SPOT_ID = "fake:seoulforest-fleamarket"
+
         @Suppress("LongMethod")
         fun seedSpots(now: Instant): List<Spot> {
             fun daysAgo(d: Long) = now.minus(Duration.ofDays(d))
             fun daysLater(d: Long) = now.plus(Duration.ofDays(d))
+            val fetched = now.minus(Duration.ofHours(3))
             return listOf(
                 Spot(
                     id = "fake:yeouido-cherry",
@@ -84,6 +109,7 @@ class FakeSpotsRepository(
                     address = "서울 영등포구 여의서로",
                     summary = "윤중로 벚꽃길을 따라 걷는 봄꽃 축제. 차 없는 거리로 운영된다.",
                     source = "fake",
+                    fetchedAt = fetched,
                 ),
                 Spot(
                     id = "fake:gwanghwamun-festival",
@@ -96,6 +122,7 @@ class FakeSpotsRepository(
                     placeName = "광화문광장",
                     summary = "광장 미디어파사드와 야시장이 함께 열린다.",
                     source = "fake",
+                    fetchedAt = fetched,
                 ),
                 Spot(
                     id = "fake:sejong-concert",
@@ -107,6 +134,7 @@ class FakeSpotsRepository(
                     placeName = "세종문화회관",
                     summary = "실내악 저녁 공연. 현장 예매 가능.",
                     source = "fake",
+                    fetchedAt = fetched,
                 ),
                 Spot(
                     id = "fake:mmca-exhibition",
@@ -117,6 +145,7 @@ class FakeSpotsRepository(
                     endsAt = daysLater(40),
                     placeName = "국립현대미술관 서울",
                     source = "fake",
+                    fetchedAt = fetched,
                 ),
                 Spot(
                     id = "fake:seongsu-popup",
@@ -128,6 +157,7 @@ class FakeSpotsRepository(
                     isFree = true,
                     placeName = "성수동 연무장길",
                     source = "fake",
+                    fetchedAt = fetched,
                 ),
                 Spot(
                     id = "fake:banpo-nightmarket",
@@ -138,6 +168,7 @@ class FakeSpotsRepository(
                     endsAt = daysLater(2),
                     placeName = "반포한강공원",
                     source = "fake",
+                    fetchedAt = fetched,
                 ),
                 Spot(
                     id = "fake:childrens-park",
@@ -149,6 +180,7 @@ class FakeSpotsRepository(
                     isFree = true,
                     placeName = "서울어린이대공원",
                     source = "fake",
+                    fetchedAt = fetched,
                 ),
                 Spot(
                     id = "fake:pet-festival",
@@ -160,6 +192,7 @@ class FakeSpotsRepository(
                     isFree = true,
                     placeName = "여의도한강공원",
                     source = "fake",
+                    fetchedAt = fetched,
                 ),
                 Spot(
                     id = "fake:jamsil-baseball",
@@ -170,6 +203,21 @@ class FakeSpotsRepository(
                     endsAt = daysLater(0).plus(Duration.ofHours(4)),
                     placeName = "잠실야구장",
                     source = "fake",
+                    fetchedAt = fetched,
+                ),
+                // 끝난 행사: 목록·지도에는 안 나오고 상세(id)로만 열린다 → '종료됨'.
+                Spot(
+                    id = ENDED_SPOT_ID,
+                    title = "서울숲 가을 플리마켓",
+                    category = Category.FESTIVAL,
+                    location = GeoPoint(37.5444, 127.0374),
+                    startsAt = daysAgo(10),
+                    endsAt = daysAgo(2),
+                    isFree = true,
+                    placeName = "서울숲",
+                    summary = "지난 주말에 열렸던 플리마켓.",
+                    source = "fake",
+                    fetchedAt = daysAgo(2),
                 ),
             )
         }

@@ -2,6 +2,7 @@ package com.herezi.core.ui
 
 import com.herezi.core.domain.Category
 import com.herezi.core.domain.When
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -42,4 +43,18 @@ private val dateFormat = DateTimeFormatter.ofPattern("M.d")
 fun formatPeriod(start: Instant, end: Instant?, zone: ZoneId = ZoneId.of("Asia/Seoul")): String {
     val s = dateFormat.format(start.atZone(zone))
     return if (end == null) "$s ~" else "$s ~ ${dateFormat.format(end.atZone(zone))}"
+}
+
+/**
+ * 지난 시각을 상대 시간으로. 1분 미만 "방금", 이후 "N분 전" / "N시간 전" / "N일 전".
+ * 미래 시각(시계 차이)은 "방금"으로 본다.
+ */
+fun formatRelativeTime(time: Instant, now: Instant): String {
+    val elapsed = Duration.between(time, now)
+    return when {
+        elapsed.toMinutes() < 1 -> "방금"
+        elapsed.toHours() < 1 -> "${elapsed.toMinutes()}분 전"
+        elapsed.toDays() < 1 -> "${elapsed.toHours()}시간 전"
+        else -> "${elapsed.toDays()}일 전"
+    }
 }

@@ -13,6 +13,8 @@ data class SpotDto(
     val lng: Double,
     @SerialName("starts_at") val startsAt: String,
     val source: String,
+    @SerialName("fetched_at") val fetchedAt: String,
+    @SerialName("is_ended") val isEnded: Boolean,
     val summary: String? = null,
     val address: String? = null,
     @SerialName("place_name") val placeName: String? = null,
@@ -26,3 +28,7 @@ data class SpotDto(
 /** openapi `SpotPage`. */
 @Serializable
 data class SpotPageDto(val items: List<SpotDto>, @SerialName("next_cursor") val nextCursor: String? = null)
+
+/** openapi `SpotMap` (`GET /v1/spots/map`). */
+@Serializable
+data class SpotMapDto(val items: List<SpotDto>, val truncated: Boolean)

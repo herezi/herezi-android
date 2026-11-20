@@ -1,6 +1,8 @@
 package com.herezi.core.network
 
 import com.herezi.core.domain.Category
+import com.herezi.core.domain.MapQuery
+import com.herezi.core.domain.MapSpots
 import com.herezi.core.domain.Spot
 import com.herezi.core.domain.SpotPage
 import com.herezi.core.domain.SpotQuery
@@ -18,6 +20,18 @@ class LiveSpotsRepository(private val api: HereziApi) : SpotsRepository {
             period = query.period.code,
             free = if (query.freeOnly) true else null,
             cursor = query.cursor,
+            limit = query.limit,
+        ).toDomain()
+
+    override suspend fun inBounds(query: MapQuery): MapSpots = api
+        .listSpotsInBBox(
+            swLat = query.bounds.sw.lat,
+            swLng = query.bounds.sw.lng,
+            neLat = query.bounds.ne.lat,
+            neLng = query.bounds.ne.lng,
+            category = query.categories.toCategoryParam(),
+            period = query.period.code,
+            free = if (query.freeOnly) true else null,
             limit = query.limit,
         ).toDomain()
 

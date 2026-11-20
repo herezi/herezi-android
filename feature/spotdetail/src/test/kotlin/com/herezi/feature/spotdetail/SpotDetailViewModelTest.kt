@@ -45,4 +45,14 @@ class SpotDetailViewModelTest {
         advanceUntilIdle()
         assertEquals(SpotDetailUiState.NotFound, vm.state.value)
     }
+
+    @Test
+    fun `끝난 행사도 상세는 열리고 isEnded 다`() = runTest(dispatcher) {
+        val vm = viewModel(FakeSpotsRepository.ENDED_SPOT_ID)
+        advanceUntilIdle()
+
+        val state = vm.state.value
+        assertTrue(state is SpotDetailUiState.Loaded)
+        assertTrue((state as SpotDetailUiState.Loaded).spot.isEnded)
+    }
 }
