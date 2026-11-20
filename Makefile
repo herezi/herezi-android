@@ -1,9 +1,9 @@
 # herezi-android 개발 명령. 에이전트와 CI 모두 이 타깃만 쓴다.
 GRADLE ?= ./gradlew
 GRADLE_FLAGS ?= --no-daemon --console=plain
-# 계약 원본. 기본은 옆에 체크아웃한 herezi-api, 없으면 GitHub main 에서 받는다.
+# 계약 원본. 기본은 옆에 체크아웃한 herezi-api, 없으면 GitHub develop 에서 받는다.
 API_REPO_DIR ?= ../herezi-api
-API_RAW_URL ?= https://raw.githubusercontent.com/herezi/herezi-api/main/api/openapi.yaml
+API_RAW_URL ?= https://raw.githubusercontent.com/herezi/herezi-api/develop/api/openapi.yaml
 
 .PHONY: check fmt build test lint sync-api clean
 

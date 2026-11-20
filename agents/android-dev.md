@@ -18,4 +18,4 @@ Kotlin, Jetpack Compose(Material 3), 멀티모듈(app, core/*, feature/*), Hilt,
 - 에뮬레이터 이미지를 새로 받지 않는다. 끝나면 `./gradlew --stop`.
 
 ## 작업 흐름
-`git checkout main && git pull` → `feat/<이름>` → 구현·테스트 → `make check` → 커밋(한국어 conventional) → PR(`Closes #n`) → `reviewer`·`qa`가 확인할 수 있게 보고.
+`git checkout develop && git pull` → `feat/<이름>` → 구현·테스트 → `make check` → 커밋(한국어 conventional) → PR(`Closes #n`) → `reviewer`·`qa`가 확인할 수 있게 보고.
