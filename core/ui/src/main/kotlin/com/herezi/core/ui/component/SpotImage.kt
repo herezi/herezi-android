@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -19,13 +20,18 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.herezi.core.domain.Category
 import com.herezi.core.domain.Spot
+import com.herezi.core.ui.image.RemoteImage
 import com.herezi.core.ui.label
 import com.herezi.core.ui.theme.HereziColors
 import com.herezi.core.ui.theme.HereziRadius
 import com.herezi.core.ui.theme.HereziTheme
+import com.herezi.core.ui.theme.Pretendard
 import com.herezi.core.ui.theme.color
 
 private const val LABEL_PILL_ALPHA = 0.2f
+
+/** 썸네일 72 에서 아이콘 28 (DESIGN §6.1). */
+private const val THUMB_ICON_RATIO = 28f / 72f
 
 /** 포스터 제목 글자 크기: 그림 폭의 이 비율(최소·최대 사이). */
 private const val TITLE_WIDTH_RATIO = 0.1f
@@ -33,13 +39,28 @@ private const val TITLE_MIN_SP = 14f
 private const val TITLE_MAX_SP = 30f
 private const val TITLE_LINE_HEIGHT = 1.12f
 
+/** 이 폭보다 좁으면 포스터 글자가 읽히지 않아 아이콘 썸네일을 쓴다 (DESIGN §6.16 크기 규칙). */
+val PosterMinWidth = 120.dp
+
 /**
- * 120 이상 이미지 자리(히어로·가로 카드·상세 대표 이미지). DESIGN.md §6.17.
- * 지금은 이미지 로더가 없어 항상 [SpotImagePlaceholder] 를 그린다. 로더를 붙일 때 여기만 바꾼다.
+ * 볼거리 이미지 자리(히어로·가로 카드·상세 대표 이미지·썸네일). DESIGN.md §6.16.
+ * `image_url` 을 불러오고, 없거나 실패하면 폭 120 이상은 [SpotImagePlaceholder], 그보다 작으면 [CategoryThumbnail].
+ * 불러오는 중에는 `bg.secondary` 만. 그림은 장식이라 스크린리더에서 숨긴다(카드가 제목을 읽는다).
  */
 @Composable
 fun SpotImage(spot: Spot, modifier: Modifier = Modifier, style: PosterStyle = PosterStyle.Full) {
-    SpotImagePlaceholder(spot.title, spot.category, modifier, style)
+    RemoteImage(url = spot.imageUrl, contentDescription = null, modifier = modifier.clearAndSetSemantics { }) {
+        if (maxWidth < PosterMinWidth) {
+            CategoryThumbnail(
+                spot.category,
+                iconSize = (maxWidth * THUMB_ICON_RATIO).coerceIn(16.dp, 28.dp),
+                modifier = Modifier.matchParentSize(),
+                shape = RectangleShape,
+            )
+        } else {
+            SpotImagePlaceholder(spot.title, spot.category, Modifier.matchParentSize(), style)
+        }
+    }
 }
 
 /** 포스터에서 무엇을 그릴지. 카드가 같은 자리에 제목·배지를 따로 그리면 겹치지 않게 뺀다. */
@@ -92,6 +113,7 @@ fun SpotImagePlaceholder(
             Text(
                 title,
                 style = TextStyle(
+                    fontFamily = Pretendard,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = titleSp.sp,
                     lineHeight = TITLE_LINE_HEIGHT.em,

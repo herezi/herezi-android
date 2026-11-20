@@ -50,10 +50,7 @@ fun CategoryDot(category: Category, modifier: Modifier = Modifier) {
     Box(modifier.size(6.dp).background(category.color, CircleShape))
 }
 
-/**
- * 썸네일 자리: 카테고리 색 12% + 카테고리 아이콘.
- * TODO(#9 후속): `image_url` 이미지 로딩(이미지 로더 의존 추가 후). 지금은 항상 대체 그림.
- */
+/** 작은 이미지 대체(폭 120 미만): 카테고리 색 12% + 카테고리 아이콘. 실제 이미지는 [SpotImage] 가 불러온다. */
 @Composable
 fun CategoryThumbnail(
     category: Category,
