@@ -11,10 +11,10 @@
 
 | 문서 | 내용 |
 |---|---|
-| [SERVICE-PLAN.md](https://github.com/herezi/herezi-api/blob/main/docs/product/SERVICE-PLAN.md) | 서비스 기획: 사용자, 카테고리 9종, 화면, 기능 우선순위 |
-| [PRODUCT.md](https://github.com/herezi/herezi-api/blob/main/docs/product/PRODUCT.md) | 제품 스펙 |
-| [TECH-PLAN.md](https://github.com/herezi/herezi-api/blob/main/docs/product/TECH-PLAN.md) | 기술 기획: 스택, 레포 구조, 개발 방식, 일정 |
-| [api/openapi.yaml](https://github.com/herezi/herezi-api/blob/main/api/openapi.yaml) | API 계약 — 이 레포의 `api/openapi.yaml`은 복사본 |
+| [SERVICE-PLAN.md](https://github.com/herezi/herezi-api/blob/develop/docs/product/SERVICE-PLAN.md) | 서비스 기획: 사용자, 카테고리 9종, 화면, 기능 우선순위 |
+| [PRODUCT.md](https://github.com/herezi/herezi-api/blob/develop/docs/product/PRODUCT.md) | 제품 스펙 |
+| [TECH-PLAN.md](https://github.com/herezi/herezi-api/blob/develop/docs/product/TECH-PLAN.md) | 기술 기획: 스택, 레포 구조, 개발 방식, 일정 |
+| [api/openapi.yaml](https://github.com/herezi/herezi-api/blob/develop/api/openapi.yaml) | API 계약 — 이 레포의 `api/openapi.yaml`은 복사본 |
 
 이 레포의 결정 기록: [`docs/adr/`](docs/adr/).
 
@@ -67,7 +67,7 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 | `make check` | `spotlessCheck checkModuleRules detekt testDebugUnitTest assembleDebug` — **PR 전에 반드시 통과**. CI도 이것만 돈다 |
 | `make fmt` | ktlint 자동 포맷 (`spotlessApply`) |
 | `make test` / `make lint` / `make build` | 부분 실행 |
-| `make sync-api` | herezi-api의 `api/openapi.yaml`을 `api/`로 복사 (`../herezi-api` 있으면 거기서, 없으면 GitHub main에서) |
+| `make sync-api` | herezi-api의 `api/openapi.yaml`을 `api/`로 복사 (`../herezi-api` 있으면 거기서, 없으면 GitHub develop에서) |
 
 계측 테스트(에뮬레이터)는 아직 없다. 단위 테스트는 JVM에서 돈다.
 
@@ -88,7 +88,7 @@ HEREZI_API_BASE_URL=
 1. **기획 먼저, 승인 후 코드.** 새 기능·구조 변경은 이슈에 계획을 적고 승인받은 뒤 시작한다.
    큰 결정은 `docs/adr/NNNN-*.md`로 남긴다.
 2. **이슈 → 브랜치 → PR → 머지.** 브랜치 이름 `feat/…`, `fix/…`, `chore/…`. PR 본문에 `Closes #n`.
-3. **main에 직접 푸시 금지.** `make check` 로컬 통과 + CI 초록일 때만 squash 머지.
+3. **`develop`(기본 브랜치)으로 PR**, `main`은 출시 전용(`develop` → `main` 릴리스 PR). **main·develop 직접 푸시 금지.** `make check` 로컬 통과 + CI 초록일 때만 squash 머지.
 4. **API 계약은 herezi-api가 기준.** 계약을 바꾸고 싶으면 herezi-api에 이슈/PR을 먼저 낸다.
    반영되면 여기서 `make sync-api` → `ContractTest`가 알려주는 대로 `Category`/`When`/DTO를 맞춘다.
    `api/openapi.yaml`을 손으로 고치지 않는다.
