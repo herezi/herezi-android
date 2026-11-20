@@ -32,6 +32,7 @@ class FakeSpotsRepository(
     override suspend fun nearby(query: SpotQuery): SpotPage {
         val items =
             visible(query.categories, query.period, query.freeOnly)
+                .filter { query.keyword.isNullOrBlank() || it.matches(query.keyword.trim()) }
                 .map { it to query.center.distanceTo(it.location) }
                 .filter { (_, distance) -> distance <= query.radiusM }
                 .sortedBy { (_, distance) -> distance }
@@ -56,6 +57,10 @@ class FakeSpotsRepository(
         val now = clock.instant()
         return all.firstOrNull { it.id == id }?.let { it.copy(isEnded = it.endsAt != null && it.endsAt < now) }
     }
+
+    /** 서버 `q` 규칙: 제목·장소명·주소 중 하나에 대소문자 무시 부분 일치. */
+    private fun Spot.matches(keyword: String): Boolean =
+        listOfNotNull(title, placeName, address).any { it.contains(keyword, ignoreCase = true) }
 
     /** 목록·지도 공통 필터. 끝난 항목은 절대 나오지 않는다. */
     private fun visible(categories: Set<Category>, period: When, freeOnly: Boolean): Sequence<Spot> {

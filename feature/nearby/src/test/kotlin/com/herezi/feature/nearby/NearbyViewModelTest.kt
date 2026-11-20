@@ -103,6 +103,21 @@ class NearbyViewModelTest {
     }
 
     @Test
+    fun `필터 초기화는 기본 필터로 돌리고 다시 불러온다`() = runTest(dispatcher) {
+        val repo = RecordingRepository(FakeSpotsRepository(clock))
+        val vm = NearbyViewModel(repo)
+        vm.toggleCategory(Category.PET)
+        vm.setPeriod(When.WEEK)
+        advanceUntilIdle()
+
+        vm.resetFilters()
+        advanceUntilIdle()
+        assertEquals(NearbyFilter(), vm.state.value.filter)
+        assertEquals(When.NOW, repo.queries.last().period)
+        assertTrue(repo.queries.last().categories.isEmpty())
+    }
+
+    @Test
     fun `실패하면 에러를 보여주고 다시 시도할 수 있다`() = runTest(dispatcher) {
         var fail = true
         val repo =

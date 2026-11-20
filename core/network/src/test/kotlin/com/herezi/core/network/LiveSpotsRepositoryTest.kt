@@ -66,6 +66,24 @@ class LiveSpotsRepositoryTest {
     }
 
     @Test
+    fun `검색어는 앞뒤 공백을 잘라 q로 싣고, 없으면 보내지 않는다`() = runTest {
+        server.enqueue(MockResponse().setBody("{\"items\":[$SPOT_JSON]}"))
+        server.enqueue(MockResponse().setBody("""{"items":[]}"""))
+
+        val page =
+            repo.nearby(
+                SpotQuery(center = GeoPoint.SeoulCityHall, radiusM = SpotQuery.SEARCH_RADIUS_M, keyword = " 빛초롱 "),
+            )
+        val url = server.takeRequest().requestUrl!!
+        assertEquals("빛초롱", url.queryParameter("q"))
+        assertEquals("20000", url.queryParameter("radius_m"))
+        assertEquals(listOf("tourapi:1"), page.items.map { it.id })
+
+        repo.nearby(SpotQuery(center = GeoPoint.SeoulCityHall, keyword = "  "))
+        assertNull(server.takeRequest().requestUrl!!.queryParameter("q"))
+    }
+
+    @Test
     fun `상세 404는 null`() = runTest {
         server.enqueue(MockResponse().setResponseCode(404).setBody("""{"code":"not_found","message":"없음"}"""))
         assertNull(repo.spot("nope"))

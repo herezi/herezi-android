@@ -4,8 +4,8 @@ import java.time.Instant
 
 data class GeoPoint(val lat: Double, val lng: Double) {
     companion object {
-        /** 위치를 모를 때 쓰는 기본 위치 (서울시청). */
-        val SeoulCityHall = GeoPoint(lat = 37.5665, lng = 126.9780)
+        /** 위치를 모를 때 쓰는 기본 위치 (서울시청). API 계약 설명과 같은 값. */
+        val SeoulCityHall = GeoPoint(lat = 37.5663, lng = 126.9779)
     }
 }
 
@@ -40,11 +40,16 @@ data class SpotQuery(
     val categories: Set<Category> = emptySet(),
     val period: When = When.NOW,
     val freeOnly: Boolean = false,
+    /** 키워드 검색(API `q`). 제목·장소명·주소 부분 일치. null 이면 검색하지 않는다. */
+    val keyword: String? = null,
     val cursor: String? = null,
     val limit: Int = DEFAULT_LIMIT,
 ) {
     companion object {
         const val DEFAULT_RADIUS_M = 3000
+
+        /** 검색(S5) 반경. */
+        const val SEARCH_RADIUS_M = 20_000
         const val DEFAULT_LIMIT = 30
     }
 }

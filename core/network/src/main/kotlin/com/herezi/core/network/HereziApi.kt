@@ -15,6 +15,7 @@ interface HereziApi {
         @Query("category") category: String? = null,
         @Query("when") period: String? = null,
         @Query("free") free: Boolean? = null,
+        @Query("q") keyword: String? = null,
         @Query("cursor") cursor: String? = null,
         @Query("limit") limit: Int? = null,
     ): SpotPageDto

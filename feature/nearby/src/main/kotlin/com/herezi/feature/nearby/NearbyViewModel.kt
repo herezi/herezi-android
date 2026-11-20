@@ -55,6 +55,9 @@ constructor(private val repository: SpotsRepository) : ViewModel() {
         it.copy(categories = if (category in categories) categories - category else categories + category)
     }
 
+    /** 빈 상태 "필터 초기화": 카테고리·무료를 끄고 기간은 기본(지금)으로. */
+    fun resetFilters() = updateFilter { NearbyFilter() }
+
     fun clearCategories() = updateFilter { it.copy(categories = emptySet()) }
 
     fun setPeriod(period: When) = updateFilter { it.copy(period = period) }

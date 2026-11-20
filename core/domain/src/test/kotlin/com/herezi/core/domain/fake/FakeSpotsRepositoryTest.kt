@@ -93,6 +93,16 @@ class FakeSpotsRepositoryTest {
     }
 
     @Test
+    fun `키워드는 제목·장소명·주소에서 대소문자 무시로 찾는다`() = runTest {
+        val far = wide.copy(radiusM = SpotQuery.SEARCH_RADIUS_M, period = When.WEEK)
+        assertEquals(listOf("fake:seongsu-popup"), repo.nearby(far.copy(keyword = "성수")).items.map { it.id })
+        assertEquals(listOf("fake:yeouido-cherry"), repo.nearby(far.copy(keyword = "영등포")).items.map { it.id })
+        assertTrue(repo.nearby(far.copy(keyword = "없는말")).items.isEmpty())
+        // 끝난 항목은 검색에도 나오지 않는다.
+        assertTrue(repo.nearby(far.copy(keyword = "플리마켓")).items.isEmpty())
+    }
+
+    @Test
     fun `시드는 갱신 시각을 가진다`() = runTest {
         assertTrue(repo.nearby(wide).items.all { it.fetchedAt <= clock.instant() })
     }

@@ -69,6 +69,14 @@ class ContractTest {
     }
 
     @Test
+    fun `목록 경로에 키워드 검색 q 가 있다`() {
+        val start = spec.indexOf("  /v1/spots:")
+        assertTrue("/v1/spots 경로가 없다", start >= 0)
+        val end = spec.indexOf("\n  /v1/", start + 1)
+        assertTrue(spec.substring(start, if (end < 0) spec.length else end).contains("name: q"))
+    }
+
+    @Test
     fun `free 는 쿼리 필터로 존재한다`() {
         assertTrue(spec.contains("name: free"))
     }
