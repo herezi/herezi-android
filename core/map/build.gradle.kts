@@ -18,4 +18,6 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.naver.map.sdk)
     implementation(libs.naver.map.compose)
+
+    testImplementation(libs.junit)
 }
