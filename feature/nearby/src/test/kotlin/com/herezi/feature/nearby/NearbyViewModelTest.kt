@@ -2,6 +2,8 @@ package com.herezi.feature.nearby
 
 import com.herezi.core.domain.Category
 import com.herezi.core.domain.GeoPoint
+import com.herezi.core.domain.MapQuery
+import com.herezi.core.domain.MapSpots
 import com.herezi.core.domain.Spot
 import com.herezi.core.domain.SpotPage
 import com.herezi.core.domain.SpotQuery
@@ -39,6 +41,8 @@ class NearbyViewModelTest {
             queries += query
             return delegate.nearby(query)
         }
+
+        override suspend fun inBounds(query: MapQuery): MapSpots = delegate.inBounds(query)
 
         override suspend fun spot(id: String): Spot? = delegate.spot(id)
     }
@@ -107,6 +111,8 @@ class NearbyViewModelTest {
                     if (fail) error("네트워크 오류")
                     return SpotPage(emptyList())
                 }
+
+                override suspend fun inBounds(query: MapQuery): MapSpots = MapSpots(emptyList(), truncated = false)
 
                 override suspend fun spot(id: String): Spot? = null
             }

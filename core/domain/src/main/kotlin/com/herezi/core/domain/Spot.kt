@@ -17,6 +17,8 @@ data class Spot(
     val location: GeoPoint,
     val startsAt: Instant,
     val source: String,
+    /** 원본 소스에서 마지막으로 가져온 시각. 상세의 "갱신 …" 표시용. */
+    val fetchedAt: Instant,
     val summary: String? = null,
     val address: String? = null,
     val placeName: String? = null,
@@ -25,6 +27,8 @@ data class Spot(
     val imageUrl: String? = null,
     val sourceUrl: String? = null,
     val distanceM: Int? = null,
+    /** 끝난 항목. 목록·지도에는 나오지 않고 상세에서만 true 일 수 있다(→ '종료됨'). */
+    val isEnded: Boolean = false,
 )
 
 data class SpotPage(val items: List<Spot>, val nextCursor: String? = null)
@@ -44,3 +48,30 @@ data class SpotQuery(
         const val DEFAULT_LIMIT = 30
     }
 }
+
+/** 지도 영역. 남서(sw)·북동(ne) 꼭짓점. 날짜변경선을 넘는 영역은 지원하지 않는다(API 와 같음). */
+data class GeoBounds(val sw: GeoPoint, val ne: GeoPoint) {
+    init {
+        require(sw.lat <= ne.lat && sw.lng <= ne.lng) { "sw 는 ne 보다 남서쪽이어야 한다: $sw, $ne" }
+    }
+
+    val center: GeoPoint get() = GeoPoint(lat = (sw.lat + ne.lat) / 2, lng = (sw.lng + ne.lng) / 2)
+
+    operator fun contains(point: GeoPoint): Boolean = point.lat in sw.lat..ne.lat && point.lng in sw.lng..ne.lng
+}
+
+/** 지도 영역 조회 조건 (`GET /v1/spots/map`). 기본값은 API 기본값과 같다. */
+data class MapQuery(
+    val bounds: GeoBounds,
+    val categories: Set<Category> = emptySet(),
+    val period: When = When.NOW,
+    val freeOnly: Boolean = false,
+    val limit: Int = DEFAULT_LIMIT,
+) {
+    companion object {
+        const val DEFAULT_LIMIT = 200
+    }
+}
+
+/** 지도 영역 안 항목(영역 중심에서 가까운 순). [truncated] 면 영역 안에 더 있다(확대하면 보인다). */
+data class MapSpots(val items: List<Spot>, val truncated: Boolean)

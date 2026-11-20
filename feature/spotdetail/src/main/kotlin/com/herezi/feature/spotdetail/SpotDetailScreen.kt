@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,7 +30,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.herezi.core.domain.Spot
 import com.herezi.core.ui.formatPeriod
+import com.herezi.core.ui.formatRelativeTime
 import com.herezi.core.ui.label
+import java.time.Instant
 
 @Composable
 fun SpotDetailRoute(onBack: () -> Unit, viewModel: SpotDetailViewModel = hiltViewModel()) {
@@ -70,6 +73,10 @@ private fun SpotDetail(spot: Spot, onBack: () -> Unit, onDirections: (Spot) -> U
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(spot.title, style = MaterialTheme.typography.headlineSmall)
+            if (spot.isEnded) {
+                Spacer(Modifier.height(8.dp))
+                EndedBadge()
+            }
             Spacer(Modifier.height(12.dp))
             val period = formatPeriod(spot.startsAt, spot.endsAt) + if (spot.isFree) " · 무료" else ""
             Text(period, style = MaterialTheme.typography.bodyMedium)
@@ -86,10 +93,31 @@ private fun SpotDetail(spot: Spot, onBack: () -> Unit, onDirections: (Spot) -> U
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                "갱신 ${formatRelativeTime(spot.fetchedAt, Instant.now())}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Button(onClick = { onDirections(spot) }, modifier = Modifier.fillMaxWidth().padding(20.dp)) {
             Text("네이버지도 길찾기")
         }
+    }
+}
+
+/** 끝난 행사 표시. 디자인 스펙이 나오면 토큰·모양을 맞춘다. */
+@Composable
+private fun EndedBadge() {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    ) {
+        Text(
+            "종료됨",
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+        )
     }
 }
 
