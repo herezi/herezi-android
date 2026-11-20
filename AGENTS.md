@@ -28,7 +28,7 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 ```
 :app ──▶ :feature:nearby ──▶ :core:map ──▶ :core:domain
    │        └────────────▶ :core:ui ───▶ :core:domain
-   ├──▶ :feature:spotdetail · onboarding · saved · search · settings ─▶ :core:ui, :core:domain
+   ├──▶ :feature:home · spotdetail · onboarding · saved · search · settings ─▶ :core:ui, :core:domain
    ├──▶ :core:network ─────▶ :core:domain
    └──▶ :core:data ────────▶ :core:domain
 ```
@@ -40,13 +40,14 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 | `:core:network` | `HereziApi`(Retrofit), DTO(계약 그대로 snake_case), `toDomain()` 매핑, `LiveSpotsRepository` |
 | `:core:ui` | DESIGN.md 토큰(`HereziTheme.colors`/`typography`, `HereziSpace`·`Radius`·`Motion` 등, 카테고리 색·아이콘), 공통 컴포넌트(`SpotCard`·배지·버튼·상태 화면·토스트), 한국어 문구·포맷 |
 | `:core:map` | `SpotMap` 컴포저블 — 네이버 지도 SDK를 쓰는 **유일한** 모듈. `LocalMapConfig`로 키 유무 전달 |
-| `:feature:nearby` | 근처 목록/지도 화면 + `NearbyViewModel`(카테고리·기간·무료 필터) |
+| `:feature:home` | S1 홈 사진 카드 피드 (`HomeFeedBuilder` 섹션은 `:core:domain` 의 순수 함수) |
+| `:feature:nearby` | S1b 전체 목록(시작 필터·페이지) + 지도 탭(S2 자리) + `NearbyViewModel` |
 | `:feature:spotdetail` | S3 상세 + `SpotDetailViewModel`, 네이버지도 길찾기/장소 보기, 공유, 저장 토글 |
 | `:feature:onboarding` | S0 위치 권한 안내 |
 | `:feature:saved` | S4 저장 목록 (재조회, 끝난 볼거리, 편집·되돌리기) |
 | `:feature:search` | S5 검색 (`q`, 최근 검색) |
 | `:feature:settings` | S6 설정 (위치 권한, 정보 출처, 오류 제보) |
-| `:app` | 조립 루트: `HereziApplication`(Hilt), `MainActivity`, 내비게이션, `DataModule`(Fake/Live 선택), `AndroidLocationSource` |
+| `:app` | 조립 루트: `HereziApplication`(Hilt), `MainActivity`, 하단 탭(주변·지도·저장)과 내비게이션, `DataModule`(Fake/Live 선택), `AndroidLocationSource` |
 
 ### 모듈 규칙
 

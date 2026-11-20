@@ -50,6 +50,7 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:ui"))
     implementation(project(":core:map"))
+    implementation(project(":feature:home"))
     implementation(project(":feature:nearby"))
     implementation(project(":feature:spotdetail"))
     implementation(project(":feature:onboarding"))

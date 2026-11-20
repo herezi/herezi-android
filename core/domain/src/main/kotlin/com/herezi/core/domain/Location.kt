@@ -16,3 +16,8 @@ data class Origin(val point: GeoPoint, val known: Boolean)
 
 suspend fun LocationSource.origin(): Origin =
     current()?.let { Origin(it, known = true) } ?: Origin(GeoPoint.SeoulCityHall, known = false)
+
+/** 좌표 → "구 동" (예: "중구 태평로1가"). 모르면 null → 화면은 "내 주변". 구현은 :app(Geocoder). */
+fun interface ReverseGeocoder {
+    suspend fun placeName(point: GeoPoint): String?
+}
