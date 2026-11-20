@@ -45,12 +45,17 @@ android {
 }
 
 dependencies {
+    implementation(project(":core:data"))
     implementation(project(":core:domain"))
     implementation(project(":core:network"))
     implementation(project(":core:ui"))
     implementation(project(":core:map"))
     implementation(project(":feature:nearby"))
     implementation(project(":feature:spotdetail"))
+    implementation(project(":feature:onboarding"))
+    implementation(project(":feature:saved"))
+    implementation(project(":feature:search"))
+    implementation(project(":feature:settings"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

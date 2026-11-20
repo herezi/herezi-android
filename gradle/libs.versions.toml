@@ -17,6 +17,7 @@ ksp = "2.0.21-1.0.28"
 # naver-map-compose 1.8.2 는 map-sdk 3.21.0 / Compose 1.8 / Kotlin 2.0.21 기준. SDK는 최신 패치로 올려 쓴다.
 naverMapSdk = "3.24.1"
 naverMapCompose = "1.8.2"
+datastore = "1.0.0"
 junit = "4.13.2"
 detekt = "1.23.7"
 spotless = "6.25.0"
@@ -48,6 +49,7 @@ hilt-compiler = { module = "com.google.dagger:hilt-android-compiler", version.re
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 naver-map-sdk = { module = "com.naver.maps:map-sdk", version.ref = "naverMapSdk" }
 naver-map-compose = { module = "io.github.fornewid:naver-map-compose", version.ref = "naverMapCompose" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

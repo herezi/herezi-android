@@ -1,5 +1,8 @@
 package com.herezi.feature.nearby
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings as AndroidSettings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,9 +16,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -28,8 +36,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.herezi.core.domain.Category
 import com.herezi.core.domain.Spot
@@ -37,6 +47,7 @@ import com.herezi.core.domain.When
 import com.herezi.core.map.SpotMap
 import com.herezi.core.ui.component.EmptyIcon
 import com.herezi.core.ui.component.ErrorState
+import com.herezi.core.ui.component.LocationBanner
 import com.herezi.core.ui.component.SpotCard
 import com.herezi.core.ui.component.SpotListSkeleton
 import com.herezi.core.ui.component.StatusMessage
@@ -49,8 +60,19 @@ import com.herezi.core.ui.theme.icon
 import java.time.Instant
 
 @Composable
-fun NearbyRoute(onSpotClick: (String) -> Unit, viewModel: NearbyViewModel = hiltViewModel()) {
+fun NearbyRoute(
+    onSpotClick: (String) -> Unit,
+    onSearch: () -> Unit = {},
+    onSaved: () -> Unit = {},
+    onSettings: () -> Unit = {},
+    viewModel: NearbyViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    LifecycleResumeEffect(viewModel) {
+        viewModel.refreshLocation()
+        onPauseOrDispose { }
+    }
     NearbyScreen(
         state = state,
         onPeriod = viewModel::setPeriod,
@@ -60,6 +82,14 @@ fun NearbyRoute(onSpotClick: (String) -> Unit, viewModel: NearbyViewModel = hilt
         onRetry = viewModel::refresh,
         onResetFilters = viewModel::resetFilters,
         onSpotClick = onSpotClick,
+        entries = NearbyEntries(onSearch, onSaved, onSettings) {
+            context.startActivity(
+                Intent(
+                    AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", context.packageName, null),
+                ),
+            )
+        },
     )
 }
 
@@ -73,6 +103,7 @@ fun NearbyScreen(
     onRetry: () -> Unit,
     onResetFilters: () -> Unit,
     onSpotClick: (String) -> Unit,
+    entries: NearbyEntries = NearbyEntries(),
 ) {
     Scaffold { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -86,6 +117,10 @@ fun NearbyScreen(
                     color = HereziTheme.colors.textPrimary,
                     modifier = Modifier.weight(1f),
                 )
+                // 다른 화면 입구. 홈·탭 재설계(S1)는 별도 이슈.
+                IconButton(onClick = entries.onSearch) { Icon(Icons.Rounded.Search, "검색") }
+                IconButton(onClick = entries.onSaved) { Icon(Icons.Rounded.BookmarkBorder, "저장") }
+                IconButton(onClick = entries.onSettings) { Icon(Icons.Rounded.Settings, "설정") }
                 TextButton(onClick = onToggleMap) { Text(if (state.showMap) "목록" else "지도") }
             }
             TabRow(selectedTabIndex = state.filter.period.ordinal) {
@@ -130,6 +165,13 @@ fun NearbyScreen(
                 Text("무료만", style = HereziTheme.typography.caption, modifier = Modifier.weight(1f))
                 Switch(checked = state.filter.freeOnly, onCheckedChange = onFreeOnly)
             }
+            if (state.locationOff) {
+                LocationBanner(
+                    "설정",
+                    onAction = entries.onLocationSettings,
+                    modifier = Modifier.padding(vertical = HereziSpace.s2),
+                )
+            }
             Box(Modifier.fillMaxSize()) {
                 val filtered = state.filter != NearbyFilter()
                 when {
@@ -172,3 +214,11 @@ private fun SpotList(spots: List<Spot>, onSpotClick: (String) -> Unit) {
         }
     }
 }
+
+/** 홈에서 다른 화면으로 가는 입구들. */
+data class NearbyEntries(
+    val onSearch: () -> Unit = {},
+    val onSaved: () -> Unit = {},
+    val onSettings: () -> Unit = {},
+    val onLocationSettings: () -> Unit = {},
+)
