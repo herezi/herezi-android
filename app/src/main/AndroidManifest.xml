@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name=".HereziApplication"
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Herezi">
+
+        <!-- 네이버 클라우드 플랫폼 Maps Client ID. local.properties/환경 변수 NAVER_MAP_CLIENT_ID 에서 주입, 없으면 빈 값. -->
+        <meta-data
+            android:name="com.naver.maps.map.NCP_KEY_ID"
+            android:value="${naverMapClientId}" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
