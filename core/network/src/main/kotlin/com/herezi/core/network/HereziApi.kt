@@ -37,4 +37,8 @@ interface HereziApi {
     /** 상세. 끝난 항목도 200 + is_ended=true. 없으면 404. */
     @GET("v1/spots/{id}")
     suspend fun getSpot(@Path("id") id: String): SpotDto
+
+    /** 좌표 → 위치명(네이버 역지오코딩, 서버 경유). 키 없음 501, 네이버 실패 502. */
+    @GET("v1/geo/reverse")
+    suspend fun reverseGeocode(@Query("lat") lat: Double, @Query("lng") lng: Double): GeoReverseDto
 }

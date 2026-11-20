@@ -32,3 +32,7 @@ data class SpotPageDto(val items: List<SpotDto>, @SerialName("next_cursor") val 
 /** openapi `SpotMap` (`GET /v1/spots/map`). */
 @Serializable
 data class SpotMapDto(val items: List<SpotDto>, val truncated: Boolean)
+
+/** openapi `GeoReverse` (`GET /v1/geo/reverse`). [label] 은 "구 동", 결과가 없으면 빈 문자열. */
+@Serializable
+data class GeoReverseDto(val area1: String, val area2: String, val area3: String, val label: String)

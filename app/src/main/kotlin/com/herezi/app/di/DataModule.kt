@@ -10,6 +10,7 @@ import com.herezi.core.domain.LocationSource
 import com.herezi.core.domain.RecentSearchesRepository
 import com.herezi.core.domain.ReverseGeocoder
 import com.herezi.core.domain.SavedSpotsRepository
+import com.herezi.core.domain.ServerFirstGeocoder
 import com.herezi.core.domain.SpotsRepository
 import com.herezi.core.domain.fake.FakeSpotsRepository
 import com.herezi.core.network.HereziApiFactory
@@ -25,6 +26,7 @@ import javax.inject.Singleton
 /**
  * 데이터 저장소 선택. HEREZI_API_BASE_URL 이 비어 있으면 서버 없이 Fake 로 동작한다.
  * 저장 목록·최근 검색·앱 설정은 기기 로컬(:core:data), 위치는 플랫폼 LocationManager.
+ * 위치명은 서버 역지오코딩 먼저, 실패하면 OS Geocoder (Fake 모드는 늘 "중구 태평로1가").
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -56,7 +58,8 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun reverseGeocoder(@ApplicationContext context: Context): ReverseGeocoder = AndroidReverseGeocoder(context)
+    fun reverseGeocoder(@ApplicationContext context: Context, spots: SpotsRepository): ReverseGeocoder =
+        ServerFirstGeocoder(spots, AndroidReverseGeocoder(context))
 
     @Provides
     fun clock(): Clock = Clock.systemUTC()

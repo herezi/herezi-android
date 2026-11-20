@@ -142,6 +142,37 @@ class LiveSpotsRepositoryTest {
         assertEquals(Instant.parse("2027-04-01T00:00:00Z"), spot.fetchedAt)
     }
 
+    @Test
+    fun `역지오코딩은 좌표를 계약대로 보내고 label 을 돌려준다`() = runTest {
+        server.enqueue(
+            MockResponse().setBody("""{"area1":"서울특별시","area2":"중구","area3":"태평로1가","label":"중구 태평로1가"}"""),
+        )
+
+        val name = repo.placeName(GeoPoint(37.5663, 126.9779))
+
+        val url = server.takeRequest().requestUrl!!
+        assertEquals("/v1/geo/reverse", url.encodedPath)
+        assertEquals("37.5663", url.queryParameter("lat"))
+        assertEquals("126.9779", url.queryParameter("lng"))
+        assertEquals("중구 태평로1가", name)
+    }
+
+    @Test
+    fun `역지오코딩 빈 label 과 501·502 는 null 이라 OS 지오코더로 넘어간다`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"area1":"","area2":"","area3":"","label":""}"""))
+        server.enqueue(MockResponse().setResponseCode(501).setBody("""{"code":"not_configured","message":"x"}"""))
+        server.enqueue(MockResponse().setResponseCode(502).setBody("""{"code":"upstream_error","message":"x"}"""))
+
+        repeat(3) { assertNull(repo.placeName(GeoPoint.SeoulCityHall)) }
+    }
+
+    @Test
+    fun `역지오코딩 400 은 오류로 던진다`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(400).setBody("""{"code":"bad_request","message":"x"}"""))
+        val error = runCatching { repo.placeName(GeoPoint.SeoulCityHall) }.exceptionOrNull()
+        assertTrue(error is retrofit2.HttpException)
+    }
+
     private companion object {
         const val SPOT_JSON =
             """{"id":"tourapi:1","title":"t","category":"popup","lat":37.55,"lng":127.0,""" +
