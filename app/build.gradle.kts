@@ -22,6 +22,9 @@ val naverMapClientId: String = config("NAVER_MAP_CLIENT_ID")
 // 비어 있으면 서버 없이 FakeSpotsRepository 로 동작한다. 예: http://10.0.2.2:8080/
 val apiBaseUrl: String = config("HEREZI_API_BASE_URL")
 
+// 실서버 API (Railway, herezi-api docs/ops/railway.md). 도메인 구매 후 api.herezi.com 으로 교체.
+val prodApiBaseUrl = "https://api-production-4ebcf3e2.up.railway.app"
+
 android {
     namespace = "com.herezi.app"
     buildFeatures {
@@ -38,6 +41,8 @@ android {
     }
     buildTypes {
         release {
+            // 릴리스는 값이 없으면 실서버(Railway)로. 디버그는 비어 있으면 Fake 데이터.
+            buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl.ifBlank { prodApiBaseUrl }}\"")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

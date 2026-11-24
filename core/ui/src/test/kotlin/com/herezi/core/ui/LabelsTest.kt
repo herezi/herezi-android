@@ -72,9 +72,11 @@ class LabelsTest {
     fun `종료 안내와 출처 이름`() {
         assertEquals("11월 17일에 끝난 볼거리예요.", formatEndedNotice(kst("2026-11-17T21:00:00")))
         assertEquals("끝난 볼거리예요.", formatEndedNotice(null))
-        assertEquals("서울 열린데이터광장", sourceLabel("seoul_culture"))
+        assertEquals("서울문화포털", sourceLabel("seoul_culture"))
+        assertEquals("서울시 공공서비스예약", sourceLabel("seoul_reservation"))
+        assertEquals("문화포털", sourceLabel("cultureinfo"))
         assertEquals("한국관광공사", sourceLabel("tourapi"))
-        assertEquals("fake", sourceLabel("fake"))
+        assertEquals("공공데이터", sourceLabel("fake"))
     }
 
     @Test
