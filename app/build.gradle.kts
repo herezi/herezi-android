@@ -23,6 +23,12 @@ val naverMapClientId: String = config("NAVER_MAP_CLIENT_ID")
 val apiBaseUrl: String = config("HEREZI_API_BASE_URL")
 
 // 실서버 API (Railway, herezi-api docs/ops/railway.md). 도메인 구매 후 api.herezi.com 으로 교체.
+// 릴리스 서명(업로드 키). 레포 밖 파일을 local.properties/환경 변수로 가리킨다. 없으면 서명 없이 빌드(CI).
+val uploadStoreFile: String = config("HEREZI_UPLOAD_STORE_FILE")
+val uploadStorePasswordFile: String = config("HEREZI_UPLOAD_STORE_PASSWORD_FILE")
+val uploadKeyAlias: String = config("HEREZI_UPLOAD_KEY_ALIAS").ifBlank { "herezi-upload" }
+val versionCodeOverride: Int? = config("HEREZI_VERSION_CODE").toIntOrNull()
+
 val prodApiBaseUrl = "https://api-production-4ebcf3e2.up.railway.app"
 
 android {
@@ -33,14 +39,26 @@ android {
     }
     defaultConfig {
         applicationId = "com.herezi.app"
-        versionCode = 1
+        versionCode = versionCodeOverride ?: 1
         versionName = "0.1.0"
         manifestPlaceholders["naverMapClientId"] = naverMapClientId
         buildConfigField("boolean", "MAP_ENABLED", naverMapClientId.isNotBlank().toString())
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
+    signingConfigs {
+        if (uploadStoreFile.isNotBlank() && uploadStorePasswordFile.isNotBlank()) {
+            create("upload") {
+                val password = file(uploadStorePasswordFile).readText().trim()
+                storeFile = file(uploadStoreFile)
+                storePassword = password
+                keyAlias = uploadKeyAlias
+                keyPassword = password
+            }
+        }
+    }
     buildTypes {
         release {
+            signingConfigs.findByName("upload")?.let { signingConfig = it }
             // 릴리스는 값이 없으면 실서버(Railway)로. 디버그는 비어 있으면 Fake 데이터.
             buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl.ifBlank { prodApiBaseUrl }}\"")
             isMinifyEnabled = false

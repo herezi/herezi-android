@@ -5,7 +5,7 @@ GRADLE_FLAGS ?= --no-daemon --console=plain
 API_REPO_DIR ?= ../herezi-api
 API_RAW_URL ?= https://raw.githubusercontent.com/herezi/herezi-api/develop/api/openapi.yaml
 
-.PHONY: check fmt build test lint sync-api clean
+.PHONY: bundle check fmt build test lint sync-api clean
 
 ## check: 포맷·린트·모듈 규칙·단위 테스트·디버그 빌드 (PR 전에 반드시 통과)
 check:
@@ -35,3 +35,7 @@ sync-api:
 
 clean:
 	$(GRADLE) $(GRADLE_FLAGS) clean
+
+bundle: ## 서명된 릴리스 AAB (local.properties에 HEREZI_UPLOAD_* 필요). HEREZI_VERSION_CODE=N 으로 버전 코드 지정
+	./gradlew :app:bundleRelease
+	@echo "AAB: app/build/outputs/bundle/release/app-release.aab"
