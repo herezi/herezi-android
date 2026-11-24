@@ -99,3 +99,9 @@ HEREZI_API_BASE_URL=
 
 ## 에이전트 역할
 역할별 지침은 [`agents/`](agents/README.md)에 있다(기획자·디자이너·리뷰어·QA·개발자). 어떤 LLM 도구든 역할을 맡으면 해당 파일(`agents/<역할>.md`)을 먼저 읽고 따른다. Claude Code는 `.claude/agents` 링크로 자동 인식한다.
+
+## 배포 (Play 내부 테스트)
+- 업로드 키: 레포 밖 `~/.herezi/android-upload.jks`, 비밀번호 파일 `~/.herezi/android-upload.pass` (절대 커밋·출력 금지, 백업 필요).
+- `local.properties`에 `HEREZI_UPLOAD_STORE_FILE`, `HEREZI_UPLOAD_STORE_PASSWORD_FILE`, (선택) `HEREZI_UPLOAD_KEY_ALIAS` 지정. 없으면 릴리스는 서명 없이 빌드된다.
+- `HEREZI_VERSION_CODE=N make bundle` → `app/build/outputs/bundle/release/app-release.aab`. 업로드마다 N을 올린다.
+- 릴리스는 실서버 API를 쓴다(`prodApiBaseUrl`).
