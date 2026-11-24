@@ -47,7 +47,7 @@ subprojects {
 
     // 공통 Android 설정은 여기 한 곳에만 둔다. 모듈 빌드 파일에는 다른 점만 적는다.
     val configureAndroid: CommonExtension<*, *, *, *, *, *>.() -> Unit = {
-        compileSdk = 35
+        compileSdk = 36
         defaultConfig {
             minSdk = 26
             testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -70,7 +70,7 @@ subprojects {
     plugins.withId("com.android.application") {
         extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
             configureAndroid()
-            defaultConfig.targetSdk = 35
+            defaultConfig.targetSdk = 36
         }
     }
     plugins.withId("com.android.library") {
