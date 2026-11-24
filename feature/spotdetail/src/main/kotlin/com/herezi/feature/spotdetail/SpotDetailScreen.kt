@@ -9,6 +9,8 @@ import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,10 +31,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.DirectionsWalk
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.CalendarToday
+import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SearchOff
@@ -52,9 +56,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -304,10 +310,8 @@ private fun DetailContent(
             )
         } ?: Spacer(Modifier.height(HereziSpace.s6))
         SourceCard(spot, now, actions.onOpenSource)
-        Spacer(Modifier.height(HereziSpace.s4))
-        TextButton(onClick = { actions.onReport(spot) }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Text("정보가 달라요", style = HereziTheme.typography.caption, color = HereziTheme.colors.textSecondary)
-        }
+        Spacer(Modifier.height(HereziSpace.s3))
+        ReportRow(onClick = { actions.onReport(spot) })
         Spacer(Modifier.height(HereziSpace.s6))
     }
 }
@@ -479,4 +483,42 @@ private fun sendReport(context: Context, spot: Spot) {
 private fun copy(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(text, text))
+}
+
+/** 오류 제보 행. 글자 버튼만으로는 신고 기능으로 보이지 않아서 아이콘·설명·화살표가 있는 테두리 행으로 둔다. */
+@Composable
+private fun ReportRow(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(HereziRadius.md)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(horizontal = HereziSpace.s5)
+            .fillMaxWidth()
+            .clip(shape)
+            .border(1.dp, HereziTheme.colors.border, shape)
+            .clickable(onClickLabel = "잘못된 정보 신고", role = Role.Button, onClick = onClick)
+            .padding(HereziSpace.s4),
+    ) {
+        Icon(
+            Icons.Rounded.Feedback,
+            contentDescription = null,
+            tint = HereziTheme.colors.textSecondary,
+            modifier = Modifier.size(22.dp),
+        )
+        Spacer(Modifier.width(HereziSpace.s3))
+        Column(Modifier.weight(1f)) {
+            Text("정보가 달라요", style = HereziTheme.typography.bodyStrong, color = HereziTheme.colors.textPrimary)
+            Text(
+                "기간·장소·요금이 틀렸다면 알려 주세요",
+                style = HereziTheme.typography.caption,
+                color = HereziTheme.colors.textSecondary,
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            contentDescription = null,
+            tint = HereziTheme.colors.textSecondary,
+            modifier = Modifier.size(20.dp),
+        )
+    }
 }
