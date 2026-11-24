@@ -149,8 +149,10 @@ fun formatEndedNotice(end: Instant?, zone: ZoneId = Seoul): String =
 fun sourceLabel(source: String): String = when (source) {
     "tourapi" -> "한국관광공사"
     "kopis" -> "KOPIS 공연예술통합전산망"
-    "seoul_culture" -> "서울 열린데이터광장"
-    else -> source
+    "seoul_culture" -> "서울문화포털"
+    "seoul_reservation" -> "서울시 공공서비스예약"
+    "cultureinfo" -> "문화포털"
+    else -> "공공데이터" // 내부 소스 코드를 그대로 보여 주지 않는다.
 }
 
 /**
