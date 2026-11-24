@@ -102,6 +102,9 @@ class FakeSpotsRepository(
         /** [placeName] 이 돌려주는 위치명 (서울시청 = 중구 태평로1가). */
         const val PLACE_NAME = "중구 태평로1가"
 
+        /** 사진(`image_url`)이 있는 시드 항목의 사진 주소. */
+        const val FAKE_PHOTO_URL = "https://picsum.photos/seed/herezi-gwanghwamun/1200/700"
+
         @Suppress("LongMethod")
         fun seedSpots(now: Instant): List<Spot> {
             fun daysAgo(d: Long) = now.minus(Duration.ofDays(d))
@@ -132,6 +135,8 @@ class FakeSpotsRepository(
                     isFree = true,
                     placeName = "광화문광장",
                     summary = "광장 미디어파사드와 야시장이 함께 열린다.",
+                    // 사진 있는 히어로·카드 확인용 (#20). 고정 시드라 늘 같은 사진.
+                    imageUrl = FAKE_PHOTO_URL,
                     source = "fake",
                     fetchedAt = fetched,
                 ),
