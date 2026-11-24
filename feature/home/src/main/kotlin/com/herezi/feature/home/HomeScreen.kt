@@ -92,10 +92,7 @@ import com.herezi.core.ui.component.StatusMessage
 import com.herezi.core.ui.component.spokenCard
 import com.herezi.core.ui.formatDistance
 import com.herezi.core.ui.formatEndsToday
-import com.herezi.core.ui.formatHeroBadge
-import com.herezi.core.ui.formatHeroPeriod
 import com.herezi.core.ui.label
-import com.herezi.core.ui.spokenDistance
 import com.herezi.core.ui.theme.HereziRadius
 import com.herezi.core.ui.theme.HereziSpace
 import com.herezi.core.ui.theme.HereziTheme
@@ -326,13 +323,7 @@ private val HeroGradient = Brush.verticalGradient(
 /** 히어로 카드 (DESIGN.md §6.13). */
 @Composable
 private fun HeroCard(spot: Spot, now: Instant, saved: Boolean, actions: HomeActions) {
-    val meta = listOfNotNull(
-        spot.category.label,
-        spot.distanceM?.let(::formatDistance),
-        formatHeroPeriod(spot.startsAt, spot.endsAt, now),
-        "무료".takeIf { spot.isFree },
-    ).joinToString(" · ")
-    val badge = formatHeroBadge(spot.startsAt, spot.endsAt, now)
+    val content = heroContent(spot, now)
     BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = HereziSpace.s5)) {
         val height = (maxWidth * HERO_RATIO).coerceAtLeast(200.dp)
         Box(
@@ -346,42 +337,39 @@ private fun HeroCard(spot: Spot, now: Instant, saved: Boolean, actions: HomeActi
                     .matchParentSize()
                     .combinedClickable(onClick = { actions.onSpotClick(spot.id) })
                     .clearAndSetSemantics {
-                        contentDescription = listOfNotNull(
-                            spot.title,
-                            badge,
-                            spot.category.label,
-                            spot.distanceM?.let(::spokenDistance),
-                            "무료".takeIf { spot.isFree },
-                        ).joinToString(", ")
+                        contentDescription = content.spoken
                         onClick {
                             actions.onSpotClick(spot.id)
                             true
                         }
                     },
             ) {
-                SpotImage(spot, Modifier.matchParentSize(), style = PosterStyle.Backdrop)
-                Box(Modifier.matchParentSize().background(HeroGradient))
+                // 사진·포스터 모두 matchParentSize: 바탕이 카드 크기를 바꾸지 않는다(iOS #23과 같은 문제 방지).
+                SpotImage(spot, Modifier.matchParentSize(), style = content.media.posterStyle)
+                if (content.showsGradient) Box(Modifier.matchParentSize().background(HeroGradient))
             }
             Column(
                 Modifier.align(Alignment.BottomStart).padding(HereziSpace.s4).padding(top = height * 0.5f),
             ) {
-                Text(
-                    spot.title,
-                    style = HereziTheme.typography.title1,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (content.showsTitle) {
+                    Text(
+                        content.title,
+                        style = HereziTheme.typography.title1,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 Spacer(Modifier.height(HereziSpace.s1))
                 Text(
-                    meta,
+                    content.meta,
                     style = HereziTheme.typography.caption.tabularNumbers(),
                     color = Color.White.copy(alpha = HERO_META_ALPHA),
                 )
             }
-            if (badge != null) {
+            if (content.badge != null) {
                 Text(
-                    badge,
+                    content.badge,
                     style = HereziTheme.typography.caption.copy(fontWeight = FontWeight.Bold),
                     color = HereziTheme.colors.textPrimary,
                     modifier = Modifier
