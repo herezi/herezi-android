@@ -131,6 +131,22 @@ class LiveSpotsRepositoryTest {
         assertTrue(result.items.isEmpty())
     }
 
+    /** #22 (iOS herezi-ios#25): 상세 경로의 스팟 ID는 정확히 한 번만 인코딩한다. `%253A` 같은 이중 인코딩 금지. */
+    @Test
+    fun `상세 경로의 스팟 ID는 한 번만 인코딩한다`() = runTest {
+        server.enqueue(MockResponse().setBody(SPOT_JSON))
+        server.enqueue(MockResponse().setResponseCode(404))
+
+        repo.spot("seoul_culture:159334")
+        val path = server.takeRequest().path!!
+        assertTrue(path, path == "/v1/spots/seoul_culture:159334" || path == "/v1/spots/seoul_culture%3A159334")
+        assertFalse(path, path.contains("%25"))
+
+        // 경로를 가를 수 있는 문자는 세그먼트 안으로 한 번만 인코딩한다.
+        repo.spot("a/b%c")
+        assertEquals("/v1/spots/a%2Fb%25c", server.takeRequest().path)
+    }
+
     @Test
     fun `끝난 상세는 200으로 받아 isEnded 와 갱신 시각을 채운다`() = runTest {
         server.enqueue(MockResponse().setBody(SPOT_JSON.replace("\"is_ended\":false", "\"is_ended\":true")))
