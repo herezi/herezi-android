@@ -15,7 +15,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -63,7 +62,6 @@ import java.time.Instant
 fun SavedRoute(
     onSpotClick: (String) -> Unit,
     onBrowseNearby: () -> Unit,
-    onSettings: () -> Unit,
     onBack: (() -> Unit)? = null,
     viewModel: SavedViewModel = hiltViewModel(),
 ) {
@@ -88,7 +86,6 @@ fun SavedRoute(
         toast = toast,
         onSpotClick = onSpotClick,
         onBrowseNearby = onBrowseNearby,
-        onSettings = onSettings,
         onBack = onBack,
         onSignIn = viewModel::signIn,
         onRetry = viewModel::retry,
@@ -109,7 +106,6 @@ fun SavedScreen(
     toast: SnackbarHostState,
     onSpotClick: (String) -> Unit,
     onBrowseNearby: () -> Unit,
-    onSettings: () -> Unit,
     onBack: (() -> Unit)?,
     onSignIn: () -> Unit,
     onRetry: () -> Unit,
@@ -149,7 +145,6 @@ fun SavedScreen(
                         )
                     }
                 }
-                if (!state.editing) IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "설정") }
             }
         },
         bottomBar = {

@@ -36,6 +36,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,11 +67,15 @@ import com.herezi.core.ui.theme.HereziSpace
 import com.herezi.core.ui.theme.HereziTheme
 import kotlinx.coroutines.launch
 
-/** [appVersion] 은 :app 이 BuildConfig 로 채운다. 예: "1.0.0 (12)". */
+/**
+ * MY 탭 루트(S6, DESIGN §6.12). 뒤로 버튼 없이 큰 제목 "MY".
+ * [appVersion] 은 :app 이 BuildConfig 로 채운다. 예: "1.0.0 (12)".
+ * [scrollToTop] 값이 바뀌면 맨 위로 올린다(선택된 MY 탭을 다시 눌렀을 때).
+ */
 @Composable
 fun SettingsRoute(
     appVersion: String,
-    onBack: () -> Unit,
+    scrollToTop: Int = 0,
     onOpenSources: () -> Unit,
     onOpenLicenses: () -> Unit,
     onDeleteAccount: () -> Unit = {},
@@ -88,7 +93,7 @@ fun SettingsRoute(
         state = state,
         appVersion = appVersion,
         toast = toast,
-        onBack = onBack,
+        scrollToTop = scrollToTop,
         onLocation = { openAppSettings(context) },
         onOpenSources = onOpenSources,
         onOpenLicenses = onOpenLicenses,
@@ -112,21 +117,23 @@ fun SettingsScreen(
     state: SettingsUiState,
     appVersion: String,
     toast: SnackbarHostState,
-    onBack: () -> Unit,
     onLocation: () -> Unit,
     onOpenSources: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onOpenLicenses: () -> Unit = {},
     account: AccountActions = AccountActions(),
     onReport: () -> Unit,
+    scrollToTop: Int = 0,
 ) {
     var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    val scroll = rememberScrollState()
+    LaunchedEffect(scrollToTop) { if (scrollToTop > 0) scroll.animateScrollTo(0) }
     Scaffold(
         containerColor = HereziTheme.colors.bgPrimary,
         snackbarHost = { HereziToastHost(toast) },
-        topBar = { TitleBar("설정", onBack) },
+        topBar = { TitleBar("MY", onBack = null) },
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(scroll)) {
             GroupTitle("계정")
             val provider = state.provider
             if (provider == null) {
@@ -139,6 +146,7 @@ fun SettingsScreen(
             GroupTitle("위치")
             SettingRow("위치 권한", value = state.accessLabel, hint = "설정 앱이 열려요", onClick = onLocation)
             GroupTitle("정보")
+            SettingRow("공지사항", hint = "브라우저가 열려요", onClick = { onOpenUrl(HereziLinks.NOTICES) })
             SettingRow("정보 출처", onClick = onOpenSources)
             SettingRow("이용약관", hint = "브라우저가 열려요", onClick = { onOpenUrl(HereziLinks.TERMS) })
             SettingRow("개인정보 처리방침", hint = "브라우저가 열려요", onClick = { onOpenUrl(HereziLinks.PRIVACY) })
@@ -270,12 +278,17 @@ fun LicensesScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun TitleBar(title: String, onBack: () -> Unit) {
+private fun TitleBar(title: String, onBack: (() -> Unit)?) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = HereziSpace.s1, vertical = HereziSpace.s2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "뒤로") }
+        if (onBack != null) {
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "뒤로") }
+        } else {
+            // 탭 루트: S4 처럼 뒤로 버튼 자리 대신 여백.
+            Spacer(Modifier.width(HereziSpace.s4))
+        }
         Text(
             title,
             style = HereziTheme.typography.title1,
