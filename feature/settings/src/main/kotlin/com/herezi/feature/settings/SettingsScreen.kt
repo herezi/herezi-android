@@ -146,6 +146,7 @@ fun SettingsScreen(
             GroupTitle("위치")
             SettingRow("위치 권한", value = state.accessLabel, hint = "설정 앱이 열려요", onClick = onLocation)
             GroupTitle("정보")
+            SettingRow("공지사항", hint = "브라우저가 열려요", onClick = { onOpenUrl(HereziLinks.NOTICES) })
             SettingRow("정보 출처", onClick = onOpenSources)
             SettingRow("이용약관", hint = "브라우저가 열려요", onClick = { onOpenUrl(HereziLinks.TERMS) })
             SettingRow("개인정보 처리방침", hint = "브라우저가 열려요", onClick = { onOpenUrl(HereziLinks.PRIVACY) })
