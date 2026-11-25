@@ -47,8 +47,8 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 | `:feature:saved` | S4 저장 목록 (재조회, 끝난 볼거리, 편집·되돌리기) |
 | `:feature:search` | S5 검색 (`q`, 최근 검색) |
 | `:feature:settings` | S6 설정 (계정·로그아웃·회원 탈퇴, 위치 권한, 정보 출처, 오류 제보) |
-| `:feature:auth` | S7 로그인 시트(`LoginSheet`·`LoginViewModel`). :app 뼈대가 `SavedLibrary.loginRequest` 를 보고 띄운다 |
-| `:app` | 조립 루트: `HereziApplication`(Hilt), `MainActivity`(Apple 웹 로그인 딥링크), 하단 탭(주변·지도·저장)과 내비게이션, `DataModule`·`AccountModule`(Fake/Live 선택), `AndroidLocationSource`, `auth/`(카카오 SDK·Custom Tabs — 카카오 SDK 는 :app 에서만) |
+| `:feature:auth` | S7 로그인 시트(`LoginSheet`·`LoginViewModel`, 카카오만). :app 뼈대가 `SavedLibrary.loginRequest` 를 보고 띄운다 |
+| `:app` | 조립 루트: `HereziApplication`(Hilt), `MainActivity`, 하단 탭(주변·지도·저장)과 내비게이션, `DataModule`·`AccountModule`(Fake/Live 선택), `AndroidLocationSource`, `auth/`(카카오 SDK — :app 에서만) |
 
 ### 모듈 규칙
 
@@ -90,7 +90,7 @@ SUPABASE_PUBLISHABLE_KEY=
 
 - 카카오 SDK 는 `https://devrepo.kakao.com/nexus/content/groups/public/` 에서 받는다(그룹 `com.kakao.sdk` 로 제한).
 - 카카오 콘솔: Android 플랫폼에 패키지 `com.herezi.app` + **키 해시**(디버그 키, Play 앱 서명 키 둘 다), OpenID Connect 활성화.
-- Supabase Auth Redirect URLs 에 `herezi://auth-callback`(Apple 웹 로그인 복귀).
+- 안드로이드 로그인은 **카카오만**(#41). Apple 로그인은 App Store 4.8 요건이라 iOS 에만 있다. 설정·탈퇴 화면은 iOS 에서 Apple 로 가입한 계정(provider=apple)을 표시만 한다.
 
 ## 위치를 서버로 보내지 않는다 (herezi-api ADR 0004)
 

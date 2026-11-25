@@ -118,15 +118,10 @@ class AuthServiceTest {
     }
 
     @Test
-    fun `nonce 해시와 PKCE challenge`() {
+    fun `nonce 해시`() {
         assertEquals(
             "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
             AuthCrypto.sha256Hex("hello"),
-        )
-        // RFC 7636 부록 B 예시.
-        assertEquals(
-            "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
-            AuthCrypto.codeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"),
         )
     }
 }

@@ -31,7 +31,6 @@ class SupabaseAuthBackend(
     private val publishableKey: String,
     private val client: OkHttpClient = OkHttpClient(),
     private val clock: Clock = Clock.systemUTC(),
-    private val redirectUrl: String = REDIRECT_URL,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) : AuthBackend {
     private val root = baseUrl.trim().trimEnd('/')
@@ -47,26 +46,6 @@ class SupabaseAuthBackend(
         },
         provider,
     )
-
-    override fun authorizeUrl(provider: AuthProvider, codeChallenge: String): String =
-        requireNotNull("$root/auth/v1/authorize".toHttpUrlOrNull()) { "SUPABASE_URL 이 잘못됐다" }
-            .newBuilder()
-            .addQueryParameter("provider", provider.code)
-            .addQueryParameter("redirect_to", redirectUrl)
-            .addQueryParameter("code_challenge", codeChallenge)
-            .addQueryParameter("code_challenge_method", "s256")
-            .build()
-            .toString()
-
-    override suspend fun exchangeCode(authCode: String, codeVerifier: String, provider: AuthProvider): AuthSession =
-        token(
-            "pkce",
-            buildJsonObject {
-                put("auth_code", authCode)
-                put("code_verifier", codeVerifier)
-            },
-            provider,
-        )
 
     override suspend fun refresh(session: AuthSession): AuthSession =
         token("refresh_token", buildJsonObject { put("refresh_token", session.refreshToken) }, session.provider)
@@ -137,9 +116,6 @@ class SupabaseAuthBackend(
     private data class UserDto(val id: String, @SerialName("app_metadata") val appMetadata: JsonObject? = null)
 
     companion object {
-        /** Supabase Auth 의 Redirect URLs 에 등록돼 있어야 한다. 매니페스트 딥링크와 같다. */
-        const val REDIRECT_URL = "herezi://auth-callback"
-
         private val JSON = "application/json".toMediaType()
         private val SUCCESS = 200..299
         private val REJECTED = setOf(400, 401, 403, 404, 422)

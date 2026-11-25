@@ -94,8 +94,7 @@ fun LoginSheetRoute(
     LoginSheet(
         title = request.sheetTitle(),
         state = state,
-        onKakao = { viewModel.signIn(AuthProvider.KAKAO, request) },
-        onApple = { viewModel.signIn(AuthProvider.APPLE, request) },
+        onKakao = { viewModel.signInWithKakao(request) },
         onDismiss = onDismiss,
         onOpenUrl = onOpenUrl,
     )
@@ -107,7 +106,6 @@ fun LoginSheet(
     title: String,
     state: LoginUiState,
     onKakao: () -> Unit,
-    onApple: () -> Unit,
     onDismiss: () -> Unit,
     onOpenUrl: (String) -> Unit,
 ) {
@@ -123,7 +121,7 @@ fun LoginSheet(
         containerColor = HereziTheme.colors.bgPrimary,
         scrimColor = HereziTheme.colors.scrim,
     ) {
-        LoginSheetContent(title, state, onKakao, onApple, onClose = { if (!busy) onDismiss() }, onOpenUrl)
+        LoginSheetContent(title, state, onKakao, onClose = { if (!busy) onDismiss() }, onOpenUrl)
     }
 }
 
@@ -132,7 +130,6 @@ fun LoginSheetContent(
     title: String,
     state: LoginUiState,
     onKakao: () -> Unit,
-    onApple: () -> Unit,
     onClose: () -> Unit,
     onOpenUrl: (String) -> Unit,
 ) {
@@ -183,15 +180,6 @@ fun LoginSheetContent(
                 progress = state.inProgress == AuthProvider.KAKAO,
                 enabled = !busy || state.inProgress == AuthProvider.KAKAO,
                 onClick = onKakao,
-            )
-            SocialButton(
-                label = "Apple로 계속하기",
-                container = Color.Black,
-                content = Color.White,
-                icon = R.drawable.ic_apple_logo,
-                progress = state.inProgress == AuthProvider.APPLE,
-                enabled = !busy || state.inProgress == AuthProvider.APPLE,
-                onClick = onApple,
             )
         }
         Spacer(Modifier.height(HereziSpace.s5))

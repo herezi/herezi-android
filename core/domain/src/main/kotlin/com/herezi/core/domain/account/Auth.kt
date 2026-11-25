@@ -5,7 +5,10 @@ import java.security.SecureRandom
 import java.time.Instant
 import java.util.Base64
 
-/** 로그인 제공자. [code] 는 Supabase `provider` 값. */
+/**
+ * 로그인 제공자. [code] 는 Supabase `provider` 값.
+ * 안드로이드는 [KAKAO] 로만 로그인한다. [APPLE] 은 iOS 에서 Apple 로 가입한 계정을 표시하기 위해서만 남긴다.
+ */
 enum class AuthProvider(val code: String) {
     KAKAO("kakao"),
     APPLE("apple"),
@@ -33,7 +36,7 @@ data class AuthSession(
  * 화면은 원인을 보여주지 않고 [com.herezi.core.domain.account.AccountMessages] 문구만 쓴다.
  */
 sealed class AuthException(message: String) : Exception(message) {
-    /** 사용자가 카카오·Apple 화면을 닫음. 조용히 기본 상태로. */
+    /** 사용자가 카카오 화면을 닫음. 조용히 기본 상태로. */
     class Cancelled : AuthException("cancelled")
 
     /** 인터넷 연결 없음. */
@@ -76,12 +79,6 @@ interface AuthBackend {
     /** `POST /auth/v1/token?grant_type=id_token` — [nonce] 는 원문(제공자에는 SHA-256 값을 보냈다). */
     suspend fun signInWithIdToken(provider: AuthProvider, idToken: String, nonce: String): AuthSession
 
-    /** 웹 OAuth(PKCE) 시작 주소. `redirect_to` 는 앱 딥링크. */
-    fun authorizeUrl(provider: AuthProvider, codeChallenge: String): String
-
-    /** `POST /auth/v1/token?grant_type=pkce` — 딥링크로 받은 `code` 교환. */
-    suspend fun exchangeCode(authCode: String, codeVerifier: String, provider: AuthProvider): AuthSession
-
     /** `POST /auth/v1/token?grant_type=refresh_token`. */
     suspend fun refresh(session: AuthSession): AuthSession
 
@@ -96,13 +93,10 @@ interface SessionStore {
     fun save(session: AuthSession?)
 }
 
-/** 플랫폼 로그인 화면 포트. 구현: :app (카카오 SDK, Custom Tabs). */
+/** 플랫폼 로그인 화면 포트. 구현: :app (카카오 SDK). */
 interface SocialLogin {
     /** 카카오톡(없으면 카카오 계정 웹)으로 로그인해 OIDC id_token 을 돌려준다. [hashedNonce] 는 SHA-256 hex. */
     suspend fun kakaoIdToken(hashedNonce: String): String
-
-    /** 브라우저(Custom Tabs)로 [authorizeUrl] 을 열고, 앱 딥링크로 돌아온 `code` 를 돌려준다. 탭을 닫으면 [AuthException.Cancelled]. */
-    suspend fun webAuthCode(authorizeUrl: String): String
 
     /** 카카오 SDK 로그아웃(토큰 삭제). 실패는 무시한다. */
     suspend fun kakaoLogout()
@@ -111,7 +105,7 @@ interface SocialLogin {
     suspend fun kakaoUnlink()
 }
 
-/** nonce·PKCE 값. 원문은 Supabase 에, SHA-256 값은 제공자에 보낸다(iOS 와 같은 방식). */
+/** nonce 값. 원문은 Supabase 에, SHA-256 값은 제공자에 보낸다(iOS 와 같은 방식). */
 object AuthCrypto {
     private const val RAW_BYTES = 32
     private val random = SecureRandom()
@@ -122,10 +116,6 @@ object AuthCrypto {
     }
 
     fun sha256Hex(value: String): String = sha256(value).joinToString("") { "%02x".format(it) }
-
-    /** PKCE S256 challenge = base64url(sha256(verifier)), 패딩 없음. */
-    fun codeChallenge(verifier: String): String =
-        Base64.getUrlEncoder().withoutPadding().encodeToString(sha256(verifier))
 
     private fun sha256(value: String): ByteArray = MessageDigest.getInstance("SHA-256").digest(value.toByteArray())
 }

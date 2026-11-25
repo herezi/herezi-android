@@ -4,7 +4,6 @@ import android.content.Context
 import com.herezi.app.BuildConfig
 import com.herezi.app.auth.ActivityTracker
 import com.herezi.app.auth.AndroidSocialLogin
-import com.herezi.app.auth.WebAuthFlow
 import com.herezi.app.location.AndroidLocationSource
 import com.herezi.app.location.AndroidReverseGeocoder
 import com.herezi.core.data.EncryptedSessionStore
@@ -105,12 +104,8 @@ object AccountModule {
 
     @Provides
     @Singleton
-    fun webAuthFlow(): WebAuthFlow = WebAuthFlow()
-
-    @Provides
-    @Singleton
-    fun socialLogin(activities: ActivityTracker, web: WebAuthFlow): SocialLogin =
-        AndroidSocialLogin(activities, web, kakaoConfigured = BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank())
+    fun socialLogin(activities: ActivityTracker): SocialLogin =
+        AndroidSocialLogin(activities, kakaoConfigured = BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank())
 
     @Provides
     @Singleton
