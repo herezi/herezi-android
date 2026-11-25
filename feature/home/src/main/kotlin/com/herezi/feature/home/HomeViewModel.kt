@@ -45,8 +45,8 @@ data class HomeUiState(
 )
 
 /**
- * 홈 (S1). `GET /v1/spots?radius_m=3000&when=week&limit=100` 한 번으로 받아 [HomeFeedBuilder] 로 섹션을 나눈다.
- * 15분 넘게 지나 돌아오면 다시 부른다.
+ * 홈 (S1). 기기 데이터(지역 파일)에서 반경 3km·이번 주·100개를 계산해 [HomeFeedBuilder] 로 섹션을 나눈다.
+ * 지역 파일이 이미 있으면 받기 전에 그 데이터로 먼저 그린다. 바뀌었거나 15분 넘게 지나 돌아오면 다시 계산한다.
  */
 @HiltViewModel
 class HomeViewModel
@@ -79,10 +79,13 @@ constructor(
     /** 당겨서 새로고침: 위치 다시 확인 후 재조회. */
     fun refresh() = load(pull = true)
 
-    /** 화면이 다시 보일 때. 15분 넘었으면 재조회. */
+    /** 화면이 다시 보일 때. 지역 파일이 바뀌었거나 마지막 계산이 15분 넘었으면 같은 위치로 다시 계산. */
     fun onResume() {
         val last = loadedAt ?: return
-        if (Duration.between(last, clock.instant()) > STALE_AFTER) load()
+        viewModelScope.launch {
+            val changed = quietly { repository.refreshData(force = false) } == true
+            if (changed || Duration.between(last, clock.instant()) > STALE_AFTER) load()
+        }
     }
 
     /** 로그아웃이면 S7 시트만 띄운다(아이콘은 채우지 않음). */
@@ -108,6 +111,8 @@ constructor(
                 val name = if (origin.known) geocoder.placeName(origin.point) ?: NAME_UNKNOWN else NAME_CITY_HALL
                 _state.update { it.copy(locationName = name) }
             }
+            // 당겨서 새로고침: 지역 파일을 강제로 확인. 실패하면 가진 데이터로 계산하고 토스트.
+            val refreshFailed = pull && quietly { repository.refreshData(force = true) } == null
             try {
                 val page = repository.nearby(
                     SpotQuery(
@@ -121,6 +126,7 @@ constructor(
                 val feed = HomeFeedBuilder.build(page.items, now, Seoul, hasMore = page.nextCursor != null)
                 loadedAt = now
                 _state.update { it.copy(feed = feed, now = now, loading = false, refreshing = false) }
+                if (refreshFailed) _messages.send(MSG_STALE)
             } catch (e: CancellationException) {
                 throw e
             } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
@@ -128,6 +134,15 @@ constructor(
                 if (hadFeed) _messages.send(MSG_STALE)
             }
         }
+    }
+
+    /** 실패하면 null(취소는 그대로 던진다). */
+    private suspend fun <T> quietly(block: suspend () -> T): T? = try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
+        null
     }
 
     companion object {

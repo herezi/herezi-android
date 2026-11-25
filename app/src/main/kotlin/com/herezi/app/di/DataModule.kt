@@ -10,11 +10,11 @@ import com.herezi.app.location.AndroidReverseGeocoder
 import com.herezi.core.data.EncryptedSessionStore
 import com.herezi.core.data.LocalStores
 import com.herezi.core.domain.AppPreferences
+import com.herezi.core.domain.LocalSpotsRepository
 import com.herezi.core.domain.LocationSource
 import com.herezi.core.domain.RecentSearchesRepository
 import com.herezi.core.domain.ReverseGeocoder
 import com.herezi.core.domain.SavedSpotsRepository
-import com.herezi.core.domain.ServerFirstGeocoder
 import com.herezi.core.domain.SpotsRepository
 import com.herezi.core.domain.account.AccountApi
 import com.herezi.core.domain.account.AuthService
@@ -24,13 +24,15 @@ import com.herezi.core.domain.fake.FakeAccountApi
 import com.herezi.core.domain.fake.FakeSpotsRepository
 import com.herezi.core.network.HereziApiFactory
 import com.herezi.core.network.LiveAccountApi
-import com.herezi.core.network.LiveSpotsRepository
+import com.herezi.core.network.RegionSpotsRepository
+import com.herezi.core.network.SpotDetailApi
 import com.herezi.core.network.SupabaseAuthBackend
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.io.File
 import java.time.Clock
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -41,18 +43,25 @@ import kotlinx.coroutines.SupervisorJob
 /**
  * 데이터 저장소 선택. HEREZI_API_BASE_URL 이 비어 있으면 서버 없이 Fake 로 동작한다.
  * 저장 목록·최근 검색·앱 설정은 기기 로컬(:core:data), 위치는 플랫폼 LocationManager.
- * 위치명은 서버 역지오코딩 먼저, 실패하면 OS Geocoder (Fake 모드는 늘 "중구 태평로1가").
+ * 볼거리는 지역 파일 + 기기 계산, 위치명은 OS Geocoder 만 쓴다(좌표를 서버로 보내지 않는다, herezi-api ADR 0004).
  */
 @Module
 @InstallIn(SingletonComponent::class)
 object DataModule {
     @Provides
     @Singleton
-    fun spotsRepository(): SpotsRepository = if (BuildConfig.API_BASE_URL.isBlank()) {
-        FakeSpotsRepository()
-    } else {
-        LiveSpotsRepository(HereziApiFactory.create(BuildConfig.API_BASE_URL))
-    }
+    fun spotsRepository(@ApplicationContext context: Context, clock: Clock): SpotsRepository =
+        if (BuildConfig.API_BASE_URL.isBlank()) {
+            FakeSpotsRepository()
+        } else {
+            // 좌표를 서버로 보내지 않는다(herezi-api ADR 0004): 지역 파일을 받아 두고 기기에서 계산한다.
+            val detail = SpotDetailApi(HereziApiFactory.create(BuildConfig.API_BASE_URL))
+            LocalSpotsRepository(
+                RegionSpotsRepository(BuildConfig.API_BASE_URL, File(context.cacheDir, "herezi-region")),
+                remoteDetail = detail::spot,
+                clock = clock,
+            )
+        }
 
     @Provides
     @Singleton
@@ -74,8 +83,7 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun reverseGeocoder(@ApplicationContext context: Context, spots: SpotsRepository): ReverseGeocoder =
-        ServerFirstGeocoder(spots, AndroidReverseGeocoder(context))
+    fun reverseGeocoder(@ApplicationContext context: Context): ReverseGeocoder = AndroidReverseGeocoder(context)
 
     @Provides
     fun clock(): Clock = Clock.systemUTC()

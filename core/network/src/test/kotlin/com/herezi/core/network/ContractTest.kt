@@ -42,39 +42,6 @@ class ContractTest {
     }
 
     @Test
-    fun `SpotMapDto 필수 필드가 계약 SpotMap 의 required 와 같다`() {
-        assertEquals(requiredOf("SpotMap"), requiredOf(SpotMapDto.serializer().descriptor))
-    }
-
-    @Test
-    fun `GeoReverseDto 필수 필드가 계약 GeoReverse 의 required 와 같다`() {
-        assertEquals(requiredOf("GeoReverse"), requiredOf(GeoReverseDto.serializer().descriptor))
-    }
-
-    @Test
-    fun `역지오코딩 경로와 lat lng 파라미터, 폴백 응답 코드가 계약에 있다`() {
-        val start = spec.indexOf("  /v1/geo/reverse:")
-        assertTrue("/v1/geo/reverse 경로가 없다", start >= 0)
-        val end = spec.indexOf("\ncomponents:", start)
-        val section = spec.substring(start, if (end < 0) spec.length else end)
-        listOf("name: lat", "name: lng", "GeoReverse", "\"501\"", "\"502\"").forEach {
-            assertTrue("$it 가 없다", section.contains(it))
-        }
-    }
-
-    @Test
-    fun `지도 bbox 경로와 파라미터가 계약에 있다`() {
-        val start = spec.indexOf("  /v1/spots/map:")
-        assertTrue("/v1/spots/map 경로가 없다", start >= 0)
-        val end = spec.indexOf("\n  /v1/", start + 1)
-        val section = spec.substring(start, if (end < 0) spec.length else end)
-        listOf("sw_lat", "sw_lng", "ne_lat", "ne_lng", "category", "when", "free", "limit").forEach {
-            assertTrue("$it 파라미터가 없다", section.contains("name: $it"))
-        }
-        assertTrue(section.contains("SpotMap"))
-    }
-
-    @Test
     fun `저장 옮기기 DTO 가 계약 SavedImport 스키마와 같다`() {
         assertEquals(requiredOf("SavedImportRequest"), requiredOf(SavedImportRequestDto.serializer().descriptor))
         assertEquals(requiredOf("SavedImportResult"), requiredOf(SavedImportResultDto.serializer().descriptor))
@@ -88,6 +55,23 @@ class ContractTest {
     }
 
     @Test
+    fun `지역 파일 DTO 가 계약 RegionSpot·RegionSpots 와 같다`() {
+        assertEquals(requiredOf("RegionSpot"), requiredOf(RegionSpotDto.serializer().descriptor))
+        assertEquals(requiredOf("RegionSpots"), requiredOf(RegionSpotsDto.serializer().descriptor))
+        assertTrue(spec.contains("\n  /v1/regions/{region}/spots:\n"))
+    }
+
+    @Test
+    fun `좌표를 받는 경로는 계약에서 deprecated 다 (앱은 부르지 않는다)`() {
+        listOf("  /v1/spots:", "  /v1/spots/map:", "  /v1/geo/reverse:").forEach { path ->
+            val start = spec.indexOf("\n$path\n")
+            assertTrue("$path 가 없다", start >= 0)
+            val end = spec.indexOf("\n  /v1/", start + 1)
+            assertTrue("$path 가 deprecated 가 아니다", spec.substring(start, end).contains("deprecated: true"))
+        }
+    }
+
+    @Test
     fun `Category enum 이 계약과 같다`() {
         assertEquals(enumAfter("    Category:"), Category.entries.map { it.code })
     }
@@ -95,14 +79,6 @@ class ContractTest {
     @Test
     fun `When enum 이 계약과 같다`() {
         assertEquals(enumAfter("name: when"), When.entries.map { it.code })
-    }
-
-    @Test
-    fun `목록 경로에 키워드 검색 q 가 있다`() {
-        val start = spec.indexOf("  /v1/spots:")
-        assertTrue("/v1/spots 경로가 없다", start >= 0)
-        val end = spec.indexOf("\n  /v1/", start + 1)
-        assertTrue(spec.substring(start, if (end < 0) spec.length else end).contains("name: q"))
     }
 
     @Test

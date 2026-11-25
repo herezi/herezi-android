@@ -72,19 +72,6 @@ class MappingTest {
     }
 
     @Test
-    fun `지도 응답을 도메인으로 바꾼다`() {
-        val json =
-            """
-            {"items":[{"id":"a","title":"t","category":"popup","lat":1,"lng":2,
-              "starts_at":"2027-01-01T00:00:00Z","source":"s","fetched_at":"2027-01-01T00:00:00Z",
-              "is_ended":false}],"truncated":true}
-            """.trimIndent()
-        val map = HereziApiFactory.json.decodeFromString(SpotMapDto.serializer(), json).toDomain()
-        assertEquals(listOf("a"), map.items.map { it.id })
-        assertTrue(map.truncated)
-    }
-
-    @Test
     fun `선택 필드가 없으면 기본값을 쓴다`() {
         val dto = dto(startsAt = "2027-01-01T00:00:00Z")
         val spot = dto.toDomain()!!
