@@ -94,6 +94,28 @@ class MapViewModelTest {
     }
 
     @Test
+    fun `위치를 알 때도 지도 준비 시 첫 영역으로 바로 찾고, 같은 영역 멈춤이 또 와도 다시 찾지 않는다`() = runTest(dispatcher) {
+        val here = GeoPoint(37.5700, 126.9768)
+        val vm = vm(location = FakeLocationSource(location = here))
+        advanceUntilIdle()
+        assertEquals(here, vm.state.value.origin)
+        assertFalse(vm.state.value.locationOff)
+        assertEquals("찾는 중…", vm.state.value.headline)
+
+        // SpotMap 이 지도 준비 시 알리는 첫 영역(#40), 이어서 SDK idle 이 같은 영역으로 한 번 더 올 수 있다.
+        vm.onCameraIdle(downtown, byUser = false)
+        vm.onCameraIdle(downtown, byUser = false)
+        advanceUntilIdle()
+
+        assertEquals(1, repo.queries.size)
+        val s = vm.state.value
+        assertTrue(s.searchedOnce)
+        assertFalse(s.showResearch)
+        assertEquals("이 지역 볼거리 ${s.spots.size}개", s.headline)
+        assertTrue(s.spots.isNotEmpty())
+    }
+
+    @Test
     fun `사용자가 옮기면 자동으로 찾지 않고 다시 찾기를 띄운다, 코드로 옮긴 건 무시`() = runTest(dispatcher) {
         val vm = vm()
         advanceUntilIdle()

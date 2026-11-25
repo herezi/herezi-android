@@ -54,6 +54,7 @@ data class MapCameraRequest(val target: GeoPoint, val id: Long)
  * - 핀: 카테고리 색 원(꼬리 없음), 묶음은 SDK [Clusterer] 로 잉크 원 + 숫자. 클러스터를 누르면 그 자리로 확대.
  * - [selectedId] 핀은 묶음에서 빼서 크게(44, 잉크 테두리, 제목 라벨) 맨 위에 그린다.
  * - 카메라가 멈출 때마다 [onCameraIdle] 에 보이는 영역(콘텐츠 패딩 제외)과 사용자 제스처였는지를 알린다.
+ *   지도가 준비되면 첫 영역도 한 번 알린다(byUser=false).
  * - 키가 없으면 회색 바탕 "지도를 불러오지 못했어요".
  */
 @OptIn(ExperimentalNaverMapApi::class)
@@ -118,6 +119,10 @@ fun SpotMap(
             }
             map.addOnCameraChangeListener(change)
             map.addOnCameraIdleListener(idle)
+            // 첫 카메라(초기 위치)는 리스너를 붙이기 전에 이미 멈춰 있어 idle 이 다시 오지 않는다(#40).
+            // 지도가 준비된 지금 보이는 영역을 한 번 알려 첫 계산을 시작한다. 이후 idle 과 겹쳐도
+            // 같은 영역이면 화면 쪽에서 무시한다.
+            map.contentBounds.toGeoBounds()?.let { currentOnIdle(it, false) }
             onDispose {
                 map.removeOnCameraChangeListener(change)
                 map.removeOnCameraIdleListener(idle)
