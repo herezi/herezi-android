@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 히어지 로고(두리번) 전경. 원본: herezi/.github assets/logo.svg (1024). 눈 흰자에 눈동자를 구멍(evenOdd)으로 뚫어 배경 잉크가 보이게 한다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.0703125"
+        android:scaleY="0.0703125"
+        android:translateX="18"
+        android:translateY="18">
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M230,512 a145,213 0 1,0 290,0 a145,213 0 1,0 -290,0 Z M504,512 a145,213 0 1,0 290,0 a145,213 0 1,0 -290,0 Z M362,461 a73,73 0 1,0 146,0 a73,73 0 1,0 -146,0 Z M636,461 a73,73 0 1,0 146,0 a73,73 0 1,0 -146,0 Z" />
+    </group>
+</vector>
