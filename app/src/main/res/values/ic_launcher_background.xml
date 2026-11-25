@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 브랜드 잉크 (DESIGN.md). -->
+    <color name="ic_launcher_background">#191F28</color>
+</resources>
