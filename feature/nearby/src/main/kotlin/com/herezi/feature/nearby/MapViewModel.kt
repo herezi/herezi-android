@@ -157,9 +157,17 @@ constructor(
         }
     }
 
-    /** 화면이 돌아왔을 때 권한이 바뀌었으면 배너만 갱신한다(지도는 그대로). */
+    /** 화면이 돌아왔을 때 권한이 바뀌었으면 배너만 갱신한다. 지역 파일이 바뀌었으면 같은 영역을 다시 계산한다. */
     fun refreshLocation() {
         viewModelScope.launch {
+            val changed = try {
+                repository.refreshData(force = false)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
+                false
+            }
+            searched?.let { if (changed) search(it) }
             val origin = location.origin()
             if (_state.value.locationOff != !origin.known) {
                 _state.update { it.copy(origin = origin.point, locationOff = !origin.known) }

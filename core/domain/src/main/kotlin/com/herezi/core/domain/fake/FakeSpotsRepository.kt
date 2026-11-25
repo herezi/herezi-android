@@ -59,7 +59,6 @@ class FakeSpotsRepository(
     }
 
     /** 서버 역지오코딩 대신 늘 서울시청 동네 이름. */
-    override suspend fun placeName(point: GeoPoint): String? = PLACE_NAME
 
     /** 서버 `q` 규칙: 제목·장소명·주소 중 하나에 대소문자 무시 부분 일치. */
     private fun Spot.matches(keyword: String): Boolean =
@@ -99,7 +98,7 @@ class FakeSpotsRepository(
         /** 끝난 시드 항목의 id. 상세로만 열린다. */
         const val ENDED_SPOT_ID = "fake:seoulforest-fleamarket"
 
-        /** [placeName] 이 돌려주는 위치명 (서울시청 = 중구 태평로1가). */
+        /** 테스트용 위치명 (서울시청 = 중구 태평로1가). */
         const val PLACE_NAME = "중구 태평로1가"
 
         /** 사진(`image_url`)이 있는 시드 항목의 사진 주소. */

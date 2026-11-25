@@ -2,7 +2,8 @@ package com.herezi.core.domain
 
 /**
  * 볼거리 데이터 포트. 화면(feature)은 이 인터페이스만 안다.
- * 구현: [com.herezi.core.domain.fake.FakeSpotsRepository] (서버 없이), :core:network 의 LiveSpotsRepository.
+ * 구현: [com.herezi.core.domain.fake.FakeSpotsRepository] (서버 없이), [LocalSpotsRepository] (지역 파일 + 기기 계산).
+ * 좌표는 서버로 보내지 않는다(herezi-api ADR 0004).
  */
 interface SpotsRepository {
     /** 조건에 맞는 근처 항목을 거리순으로 돌려준다. */
@@ -15,8 +16,8 @@ interface SpotsRepository {
     suspend fun spot(id: String): Spot?
 
     /**
-     * 서버 역지오코딩(`GET /v1/geo/reverse`)의 위치명, 예 "중구 태평로1가".
-     * 결과가 없거나(빈 label) 서버가 못 하면(501·502) null → [ServerFirstGeocoder] 가 OS 지오코더로 넘긴다.
+     * 기기 데이터(지역 파일)를 서버에서 다시 확인한다. [force] 면 1시간 규칙을 무시한다.
+     * 바뀌었으면 true. 서버 없이 도는 구현은 아무것도 하지 않는다.
      */
-    suspend fun placeName(point: GeoPoint): String?
+    suspend fun refreshData(force: Boolean): Boolean = false
 }

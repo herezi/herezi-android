@@ -51,8 +51,6 @@ class SearchViewModelTest {
 
         override suspend fun inBounds(query: MapQuery): MapSpots = delegate.inBounds(query)
 
-        override suspend fun placeName(point: GeoPoint): String? = delegate.placeName(point)
-
         override suspend fun spot(id: String): Spot? = delegate.spot(id)
     }
 

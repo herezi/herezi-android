@@ -35,9 +35,9 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 
 | 모듈 | 역할 |
 |---|---|
-| `:core:domain` | 순수 Kotlin. `Spot`, `Category`(9종), `When`, `SpotQuery`(`keyword`=검색 `q`), 포트 `SpotsRepository`·`SavedSpotsRepository`(기기 로컬, 옮기기 원본)·`RecentSearchesRepository`·`AppPreferences`·`LocationSource`. `account/`: `AuthService`(세션·리프레시·401 재시도), `SavedLibrary`(계정 저장·로그인 요청·옮기기·탈퇴), 포트 `AuthBackend`·`SessionStore`·`AccountApi`·`SavedCache`·`SocialLogin`. Fake들(`fake/`, `AccountFixture`) |
+| `:core:domain` | 순수 Kotlin. `Spot`, `Category`(9종), `When`, `SpotQuery`(`keyword`=검색 `q`), `SpotQueryEngine`(기기 조회: 하버사인·KST 기간·필터·bbox·거리순, 서버 `when.go` 이식), `LocalSpotsRepository`(지역 파일 위 조회), 포트 `RegionData`· `SpotsRepository`·`SavedSpotsRepository`(기기 로컬, 옮기기 원본)·`RecentSearchesRepository`·`AppPreferences`·`LocationSource`. `account/`: `AuthService`(세션·리프레시·401 재시도), `SavedLibrary`(계정 저장·로그인 요청·옮기기·탈퇴), 포트 `AuthBackend`·`SessionStore`·`AccountApi`·`SavedCache`·`SocialLogin`. Fake들(`fake/`, `AccountFixture`) |
 | `:core:data` | 기기 로컬 저장(DataStore + JSON): 기기 저장 스냅샷, 계정 저장 캐시, 최근 검색, S0 노출 여부. 세션은 `EncryptedSessionStore`(EncryptedSharedPreferences) |
-| `:core:network` | `HereziApi`(Retrofit), DTO(계약 그대로 snake_case), `toDomain()` 매핑, `LiveSpotsRepository`, `LiveAccountApi`(`/v1/me/…`), `SupabaseAuthBackend`(OkHttp, Supabase Auth REST) |
+| `:core:network` | `HereziApi`(Retrofit), DTO(계약 그대로 snake_case), `toDomain()` 매핑, `RegionSpotsRepository`(지역 파일 ETag/304·디스크 캐시), `SpotDetailApi`(상세), `LiveAccountApi`(`/v1/me/…`), `SupabaseAuthBackend`(OkHttp, Supabase Auth REST) |
 | `:core:ui` | DESIGN.md 토큰(`HereziTheme.colors`/`typography`, `HereziSpace`·`Radius`·`Motion` 등, 카테고리 색·아이콘), 공통 컴포넌트(`SpotCard`·배지·버튼·상태 화면·토스트), 이미지 로더(`RemoteImage`·`HereziImageLoader`, 라이브러리 없음), Pretendard 글꼴(`res/font`, OFL 원문 `res/raw`), 한국어 문구·포맷 |
 | `:core:map` | `SpotMap` 컴포저블 — 네이버 지도 SDK를 쓰는 **유일한** 모듈. 원형 카테고리 핀·SDK `Clusterer` 묶음·선택 핀(비트맵으로 그림), `PinStyle`로 색·아이콘·글꼴을 받는다. `LocalMapConfig`로 키 유무 전달 |
 | `:feature:home` | S1 홈 사진 카드 피드 (`HomeFeedBuilder` 섹션은 `:core:domain` 의 순수 함수) |
@@ -91,6 +91,12 @@ SUPABASE_PUBLISHABLE_KEY=
 - 카카오 SDK 는 `https://devrepo.kakao.com/nexus/content/groups/public/` 에서 받는다(그룹 `com.kakao.sdk` 로 제한).
 - 카카오 콘솔: Android 플랫폼에 패키지 `com.herezi.app` + **키 해시**(디버그 키, Play 앱 서명 키 둘 다), OpenID Connect 활성화.
 - Supabase Auth Redirect URLs 에 `herezi://auth-callback`(Apple 웹 로그인 복귀).
+
+## 위치를 서버로 보내지 않는다 (herezi-api ADR 0004)
+
+앱은 사용자 좌표를 서버로 보내지 않는다. 볼거리는 `GET /v1/regions/seoul/spots`(지역 파일)를 받아 두고 근처·지도·검색·필터·정렬을
+기기에서 계산하고, 위치명은 기기 `Geocoder` 만 쓴다. `/v1/spots?lat…`·`/v1/spots/map`·`/v1/geo/reverse` 를 다시 쓰지 않는다
+(`NoLocationSendTest` 가 막는다).
 
 ## 작업 규칙
 

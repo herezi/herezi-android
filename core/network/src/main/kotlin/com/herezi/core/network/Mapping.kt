@@ -2,7 +2,6 @@ package com.herezi.core.network
 
 import com.herezi.core.domain.Category
 import com.herezi.core.domain.GeoPoint
-import com.herezi.core.domain.MapSpots
 import com.herezi.core.domain.Spot
 import com.herezi.core.domain.SpotPage
 import java.time.Instant
@@ -39,7 +38,29 @@ fun SpotDto.toDomain(): Spot? {
 
 fun SpotPageDto.toDomain(): SpotPage = SpotPage(items = items.mapNotNull { it.toDomain() }, nextCursor = nextCursor)
 
-fun SpotMapDto.toDomain(): MapSpots = MapSpots(items = items.mapNotNull { it.toDomain() }, truncated = truncated)
+/** 지역 파일 항목 → 도메인. `is_ended` 는 쓰지 않는다(조회 때 기기 시각으로 계산). */
+fun RegionSpotDto.toDomain(): Spot? {
+    val category = Category.fromCode(category)
+    val starts = parseInstant(startsAt)
+    val fetched = parseInstant(fetchedAt)
+    if (category == null || starts == null || fetched == null) return null
+    return Spot(
+        id = id,
+        title = title,
+        category = category,
+        location = GeoPoint(lat = lat, lng = lng),
+        startsAt = starts,
+        source = source,
+        fetchedAt = fetched,
+        summary = summary,
+        address = address,
+        placeName = placeName,
+        endsAt = endsAt?.let(::parseInstant),
+        isFree = isFree,
+        imageUrl = imageUrl,
+        sourceUrl = sourceUrl,
+    )
+}
 
 // RFC 3339 (`2026-04-01T10:00:00+09:00`, `...Z`) 모두 받는다.
 private fun parseInstant(value: String): Instant? = try {

@@ -102,7 +102,19 @@ constructor(
     /** 빈 상태 "필터 초기화": 지금·전체·무료 끔. */
     fun resetFilters() = updateFilter { NearbyFilter() }
 
-    fun refresh() = load()
+    /** 당겨서 새로고침: 지역 파일을 강제로 확인한 뒤 다시 계산(확인이 실패해도 가진 데이터로). */
+    fun refresh() {
+        viewModelScope.launch {
+            try {
+                repository.refreshData(force = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (@Suppress("TooGenericExceptionCaught", "SwallowedException") e: Exception) {
+                // 오프라인: 마지막 데이터로 계산.
+            }
+            load()
+        }
+    }
 
     /** 끝에서 몇 개 남았을 때 부른다. 다음 페이지가 없거나 불러오는 중이면 무시. */
     fun loadMore() {
