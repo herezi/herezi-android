@@ -240,7 +240,7 @@ class SavedLibrary(
     /**
      * 회원 탈퇴. 카카오는 `unlink` 를 먼저(실패해도 진행), 그다음 `DELETE /v1/me`.
      * 성공하면 세션·캐시·기기 로컬 저장을 모두 지운다. 실패하면 [AuthException] 을 그대로 던진다(화면이 문구를 고른다).
-     * TODO(herezi-api#72): Apple 사용자는 서버가 Apple 토큰을 철회해야 한다. 앱은 아직 따로 하는 일이 없다.
+     * iOS 에서 Apple 로 가입한 계정이면 앱이 따로 하는 일은 없다(안드로이드는 Apple 로그인이 없다. Apple 토큰 철회는 iOS·서버 몫, herezi-api#72).
      */
     suspend fun deleteAccount() {
         val provider = auth.session.value?.provider ?: throw AuthException.SessionExpired()

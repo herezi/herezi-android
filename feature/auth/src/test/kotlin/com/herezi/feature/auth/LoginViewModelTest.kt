@@ -52,7 +52,7 @@ class LoginViewModelTest {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { f.library.messages.collect { toasts += it } }
         val request = LoginRequest(LoginReason.SAVE, catalog[0])
 
-        vm.signIn(AuthProvider.KAKAO, request)
+        vm.signInWithKakao(request)
         assertEquals(AuthProvider.KAKAO, vm.state.value.inProgress)
         advanceUntilIdle()
 
@@ -70,7 +70,7 @@ class LoginViewModelTest {
     @Test
     fun `취소는 문구 없이 기본 상태`() = runTest(dispatcher) {
         f.social.error = AuthException.Cancelled()
-        vm.signIn(AuthProvider.KAKAO, null)
+        vm.signInWithKakao(null)
         advanceUntilIdle()
         assertEquals(LoginUiState(), vm.state.value)
         assertNull(f.auth.session.value)
@@ -79,23 +79,14 @@ class LoginViewModelTest {
     @Test
     fun `오류는 일반 문구, 오프라인은 연결 문구`() = runTest(dispatcher) {
         f.backend.signInError = AuthException.Rejected(400)
-        vm.signIn(AuthProvider.KAKAO, null)
+        vm.signInWithKakao(null)
         advanceUntilIdle()
         assertEquals(LoginViewModel.MSG_FAILED, vm.state.value.error)
 
         f.backend.signInError = AuthException.Offline()
-        vm.signIn(AuthProvider.KAKAO, null)
+        vm.signInWithKakao(null)
         advanceUntilIdle()
         assertEquals(LoginViewModel.MSG_OFFLINE, vm.state.value.error)
-    }
-
-    @Test
-    fun `Apple 은 PKCE 웹 흐름으로 code 를 교환한다`() = runTest(dispatcher) {
-        vm.signIn(AuthProvider.APPLE, LoginRequest(LoginReason.ACCOUNT))
-        advanceUntilIdle()
-        val url = f.social.openedUrls.single()
-        assertTrue(url, url.contains("provider=apple") && url.contains("code_challenge="))
-        assertEquals(AuthProvider.APPLE, f.auth.session.value?.provider)
     }
 
     @Test
@@ -108,20 +99,18 @@ class LoginViewModelTest {
             }
         }
         val vm = LoginViewModel(f.auth, social, f.library)
-        vm.signIn(AuthProvider.KAKAO, null)
+        vm.signInWithKakao(null)
         advanceUntilIdle()
-        vm.signIn(AuthProvider.KAKAO, null)
-        vm.signIn(AuthProvider.APPLE, null)
+        vm.signInWithKakao(null)
         gate.complete(Unit)
         advanceUntilIdle()
         assertEquals(1, f.backend.idTokenCalls.size)
-        assertTrue(f.social.openedUrls.isEmpty())
     }
 
     @Test
     fun `설정이 없으면 로그인 실패 문구`() = runTest(dispatcher) {
         f.backend.isConfigured = false
-        vm.signIn(AuthProvider.KAKAO, null)
+        vm.signInWithKakao(null)
         advanceUntilIdle()
         assertEquals(LoginViewModel.MSG_FAILED, vm.state.value.error)
         assertTrue(f.social.hashedNonces.isEmpty())

@@ -28,14 +28,6 @@ class AuthService(private val backend: AuthBackend, private val store: SessionSt
         return backend.signInWithIdToken(provider, idToken, nonce).also(::adopt)
     }
 
-    fun authorizeUrl(provider: AuthProvider, codeChallenge: String): String {
-        if (!backend.isConfigured) throw AuthException.NotConfigured()
-        return backend.authorizeUrl(provider, codeChallenge)
-    }
-
-    suspend fun exchangeCode(authCode: String, codeVerifier: String, provider: AuthProvider): AuthSession =
-        backend.exchangeCode(authCode, codeVerifier, provider).also(::adopt)
-
     /** 서버 로그아웃은 실패해도 무시하고 기기에서는 항상 로그아웃한다. */
     suspend fun signOut() {
         val current = _session.value ?: return

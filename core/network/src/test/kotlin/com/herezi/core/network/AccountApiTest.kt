@@ -76,18 +76,11 @@ class AccountApiTest {
     }
 
     @Test
-    fun `Apple 웹 흐름 주소와 PKCE 교환`() = runTest {
-        val url = backend.authorizeUrl(AuthProvider.APPLE, "challenge-1")
-        assertTrue(url, url.contains("/auth/v1/authorize?provider=apple"))
-        assertTrue(url, url.contains("redirect_to=herezi%3A%2F%2Fauth-callback"))
-        assertTrue(url, url.contains("code_challenge=challenge-1&code_challenge_method=s256"))
-
+    fun `서버가 provider apple 로 돌려준 계정은 APPLE 로 표시한다`() = runTest {
+        // iOS 에서 Apple 로 가입한 계정. 안드로이드는 Apple 로그인을 시작하지 않지만 표시는 한다.
         server.enqueue(json(200, tokenJson(0, provider = "apple")))
-        val session = backend.exchangeCode("code-1", "verifier-1", AuthProvider.APPLE)
-        val req = server.takeRequest()
-        assertEquals("/auth/v1/token?grant_type=pkce", req.path)
-        val body = req.body.readUtf8()
-        assertTrue(body.contains("\"auth_code\":\"code-1\"") && body.contains("\"code_verifier\":\"verifier-1\""))
+        val session = backend.signInWithIdToken(AuthProvider.KAKAO, "id", "n")
+        assertEquals("/auth/v1/token?grant_type=id_token", server.takeRequest().path)
         assertEquals(AuthProvider.APPLE, session.provider)
     }
 

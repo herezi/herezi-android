@@ -126,14 +126,6 @@ class FakeAuthBackend(override var isConfigured: Boolean = true, var now: () -> 
         return session(provider)
     }
 
-    override fun authorizeUrl(provider: AuthProvider, codeChallenge: String): String =
-        "https://example.supabase.co/auth/v1/authorize?provider=${provider.code}&code_challenge=$codeChallenge"
-
-    override suspend fun exchangeCode(authCode: String, codeVerifier: String, provider: AuthProvider): AuthSession {
-        signInError?.let { throw it }
-        return session(provider)
-    }
-
     override suspend fun refresh(session: AuthSession): AuthSession {
         refreshCount++
         refreshError?.let { throw it }
@@ -145,10 +137,9 @@ class FakeAuthBackend(override var isConfigured: Boolean = true, var now: () -> 
     }
 }
 
-class FakeSocialLogin(var idToken: String = "kakao-id-token", var authCode: String = "code") : SocialLogin {
+class FakeSocialLogin(var idToken: String = "kakao-id-token") : SocialLogin {
     var error: AuthException? = null
     val hashedNonces = mutableListOf<String>()
-    val openedUrls = mutableListOf<String>()
     var logoutCalls = 0
     var unlinkCalls = 0
 
@@ -156,12 +147,6 @@ class FakeSocialLogin(var idToken: String = "kakao-id-token", var authCode: Stri
         hashedNonces += hashedNonce
         error?.let { throw it }
         return idToken
-    }
-
-    override suspend fun webAuthCode(authorizeUrl: String): String {
-        openedUrls += authorizeUrl
-        error?.let { throw it }
-        return authCode
     }
 
     override suspend fun kakaoLogout() {
