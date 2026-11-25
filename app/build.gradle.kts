@@ -22,6 +22,11 @@ val naverMapClientId: String = config("NAVER_MAP_CLIENT_ID")
 // 비어 있으면 서버 없이 FakeSpotsRepository 로 동작한다. 예: http://10.0.2.2:8080/
 val apiBaseUrl: String = config("HEREZI_API_BASE_URL")
 
+// 로그인 (S7). 없으면 로그인만 "설정 없음"으로 실패하고 빌드·테스트는 된다(CI). 값은 절대 커밋·출력하지 않는다.
+val kakaoNativeAppKey: String = config("KAKAO_NATIVE_APP_KEY")
+val supabaseUrl: String = config("SUPABASE_URL")
+val supabasePublishableKey: String = config("SUPABASE_PUBLISHABLE_KEY")
+
 // 실서버 API (Railway, herezi-api docs/ops/railway.md). 도메인 구매 후 api.herezi.com 으로 교체.
 // 릴리스 서명(업로드 키). 레포 밖 파일을 local.properties/환경 변수로 가리킨다. 없으면 서명 없이 빌드(CI).
 val uploadStoreFile: String = config("HEREZI_UPLOAD_STORE_FILE")
@@ -44,6 +49,11 @@ android {
         manifestPlaceholders["naverMapClientId"] = naverMapClientId
         buildConfigField("boolean", "MAP_ENABLED", naverMapClientId.isNotBlank().toString())
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "KAKAO_NATIVE_APP_KEY", "\"$kakaoNativeAppKey\"")
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabasePublishableKey\"")
+        // 카카오 로그인 리다이렉트 스킴 `kakao{NATIVE_APP_KEY}` (키가 없으면 의미 없는 기본값).
+        manifestPlaceholders["kakaoScheme"] = "kakao${kakaoNativeAppKey.ifBlank { "0" }}"
     }
     signingConfigs {
         if (uploadStoreFile.isNotBlank() && uploadStorePasswordFile.isNotBlank()) {
@@ -73,6 +83,7 @@ dependencies {
     implementation(project(":core:network"))
     implementation(project(":core:ui"))
     implementation(project(":core:map"))
+    implementation(project(":feature:auth"))
     implementation(project(":feature:home"))
     implementation(project(":feature:nearby"))
     implementation(project(":feature:spotdetail"))
@@ -85,6 +96,10 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.kakao.user)
+    implementation(libs.androidx.browser)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     debugImplementation(libs.compose.ui.tooling)

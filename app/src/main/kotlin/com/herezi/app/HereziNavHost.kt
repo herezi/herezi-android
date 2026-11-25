@@ -1,9 +1,11 @@
 package com.herezi.app
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmark
@@ -14,15 +16,20 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -34,8 +41,10 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.herezi.core.domain.ListFilter
+import com.herezi.core.ui.component.HereziToastHost
 import com.herezi.core.ui.theme.HereziColors
 import com.herezi.core.ui.theme.HereziTheme
+import com.herezi.feature.auth.LoginSheetRoute
 import com.herezi.feature.home.HomeRoute
 import com.herezi.feature.nearby.MapRoute
 import com.herezi.feature.nearby.NearbyRoute
@@ -43,6 +52,7 @@ import com.herezi.feature.nearby.NearbyViewModel
 import com.herezi.feature.onboarding.OnboardingRoute
 import com.herezi.feature.saved.SavedRoute
 import com.herezi.feature.search.SearchRoute
+import com.herezi.feature.settings.DeleteAccountRoute
 import com.herezi.feature.settings.LicensesScreen
 import com.herezi.feature.settings.SettingsRoute
 import com.herezi.feature.settings.SourcesScreen
@@ -63,6 +73,7 @@ private const val SAVED = "saved"
 private const val SETTINGS = "settings"
 private const val SOURCES = "settings/sources"
 private const val LICENSES = "settings/licenses"
+private const val DELETE_ACCOUNT = "settings/delete-account"
 private val FilterArgs = "${NearbyViewModel.ARG_WHEN}={${NearbyViewModel.ARG_WHEN}}" +
     "&${NearbyViewModel.ARG_CATEGORY}={${NearbyViewModel.ARG_CATEGORY}}" +
     "&${NearbyViewModel.ARG_FREE}={${NearbyViewModel.ARG_FREE}}"
@@ -76,7 +87,7 @@ private fun ListFilter.query(): String = "${NearbyViewModel.ARG_WHEN}=${period.c
 
 /** 앱 뼈대. S0(필요할 때만) 다음에 탭 화면. */
 @Composable
-fun HereziApp() {
+fun HereziApp(app: AppViewModel = hiltViewModel()) {
     var onboarded by rememberSaveable { mutableStateOf(false) }
     if (!onboarded) {
         OnboardingRoute(onDone = { onboarded = true })
@@ -85,8 +96,16 @@ fun HereziApp() {
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val current = entry?.destination
+    val context = LocalContext.current
+    val toast = remember { SnackbarHostState() }
+    LaunchedEffect(app) { app.messages.collect { toast.showSnackbar(it) } }
+    val loginRequest by app.loginRequest.collectAsStateWithLifecycle()
+    loginRequest?.let { request ->
+        LoginSheetRoute(request = request, onDismiss = app::dismissLogin, onOpenUrl = { openInApp(context, it) })
+    }
     Scaffold(
         containerColor = HereziTheme.colors.bgPrimary,
+        snackbarHost = { HereziToastHost(toast) },
         bottomBar = {
             NavigationBar(containerColor = HereziTheme.colors.bgPrimary) {
                 Tab.entries.forEach { tab ->
@@ -185,6 +204,19 @@ private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
                     onBack = { nav.popBackStack() },
                     onOpenSources = { nav.navigate(SOURCES) },
                     onOpenLicenses = { nav.navigate(LICENSES) },
+                    onDeleteAccount = { nav.navigate(DELETE_ACCOUNT) },
+                )
+            }
+            composable(DELETE_ACCOUNT) {
+                DeleteAccountRoute(
+                    onBack = { nav.popBackStack() },
+                    onFinished = {
+                        // 탭 바를 처음 상태로 되돌리고 주변 탭 홈(S1)으로.
+                        nav.navigate(Tab.NEARBY.graph) {
+                            popUpTo(nav.graph.id) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
             composable(SOURCES) { SourcesScreen(onBack = { nav.popBackStack() }) }
@@ -229,6 +261,15 @@ private fun NavGraphBuilder.spotDetail(nav: NavHostController, tab: Tab) {
 
 private fun NavHostController.openSpot(tab: Tab, id: String) =
     navigate("${tab.name.lowercase()}/spot/${URLEncoder.encode(id, "UTF-8")}")
+
+/** 약관 등: Custom Tabs(인앱 브라우저). 없으면 일반 브라우저, 그것도 없으면 무시. */
+private fun openInApp(context: Context, url: String) {
+    try {
+        CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, Uri.parse(url))
+    } catch (_: ActivityNotFoundException) {
+        // 브라우저 없음.
+    }
+}
 
 private fun openAppSettings(context: Context) {
     context.startActivity(

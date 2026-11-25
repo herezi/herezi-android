@@ -75,6 +75,19 @@ class ContractTest {
     }
 
     @Test
+    fun `저장 옮기기 DTO 가 계약 SavedImport 스키마와 같다`() {
+        assertEquals(requiredOf("SavedImportRequest"), requiredOf(SavedImportRequestDto.serializer().descriptor))
+        assertEquals(requiredOf("SavedImportResult"), requiredOf(SavedImportResultDto.serializer().descriptor))
+    }
+
+    @Test
+    fun `계정 경로가 계약에 있다`() {
+        listOf("  /v1/me/saved:", "  /v1/me/saved:import:", "  /v1/me/saved/{spot_id}:", "  /v1/me:").forEach {
+            assertTrue("$it 경로가 없다", spec.contains("\n$it\n"))
+        }
+    }
+
+    @Test
     fun `Category enum 이 계약과 같다`() {
         assertEquals(enumAfter("    Category:"), Category.entries.map { it.code })
     }

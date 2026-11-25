@@ -16,9 +16,11 @@ import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -27,6 +29,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,6 +53,7 @@ import com.herezi.core.domain.distanceTo
 import com.herezi.core.ui.component.HereziToastHost
 import com.herezi.core.ui.component.PrimaryButton
 import com.herezi.core.ui.component.SpotCard
+import com.herezi.core.ui.component.SpotListSkeleton
 import com.herezi.core.ui.component.StatusMessage
 import com.herezi.core.ui.theme.HereziSpace
 import com.herezi.core.ui.theme.HereziTheme
@@ -86,6 +90,9 @@ fun SavedRoute(
         onBrowseNearby = onBrowseNearby,
         onSettings = onSettings,
         onBack = onBack,
+        onSignIn = viewModel::signIn,
+        onRetry = viewModel::retry,
+        onPullRefresh = viewModel::pullRefresh,
         onRemove = viewModel::remove,
         onClearEnded = viewModel::clearEnded,
         onToggleEditing = viewModel::toggleEditing,
@@ -94,6 +101,8 @@ fun SavedRoute(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Suppress("LongParameterList", "LongMethod")
 @Composable
 fun SavedScreen(
     state: SavedUiState,
@@ -102,6 +111,9 @@ fun SavedScreen(
     onBrowseNearby: () -> Unit,
     onSettings: () -> Unit,
     onBack: (() -> Unit)?,
+    onSignIn: () -> Unit,
+    onRetry: () -> Unit,
+    onPullRefresh: () -> Unit,
     onRemove: (String) -> Unit,
     onClearEnded: () -> Unit,
     onToggleEditing: () -> Unit,
@@ -128,7 +140,7 @@ fun SavedScreen(
                     color = HereziTheme.colors.textPrimary,
                     modifier = Modifier.weight(1f).semantics { heading() },
                 )
-                if (!state.isEmpty && state.loaded) {
+                if (state.canEdit) {
                     TextButton(onClick = onToggleEditing) {
                         Text(
                             if (state.editing) "완료" else "편집",
@@ -137,7 +149,7 @@ fun SavedScreen(
                         )
                     }
                 }
-                IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "설정") }
+                if (!state.editing) IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "설정") }
             }
         },
         bottomBar = {
@@ -153,16 +165,32 @@ fun SavedScreen(
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            if (state.isEmpty) {
-                StatusMessage(
-                    icon = Icons.Rounded.Bookmark,
-                    title = "저장한 볼거리가 없어요",
-                    description = "마음에 드는 곳을 저장해 두면 여기에 모여요.",
-                    actionLabel = "주변 둘러보기",
-                    onAction = onBrowseNearby,
+            when (state.mode) {
+                SavedMode.SIGNED_OUT -> SignInPrompt(state.deviceSavedCount, onSignIn, onBrowseNearby)
+                SavedMode.LOADING -> SpotListSkeleton()
+                SavedMode.ERROR -> StatusMessage(
+                    icon = Icons.Rounded.WifiOff,
+                    title = "저장 목록을 불러오지 못했어요",
+                    description = "잠시 후 다시 시도해 주세요.",
+                    actionLabel = "다시 시도",
+                    onAction = onRetry,
                 )
-            } else {
-                SavedList(state, onSpotClick, onRemove, onToggleSelected, onClearEnded = { confirmClear = true })
+                SavedMode.EMPTY -> PullToRefreshBox(state.refreshing, onPullRefresh, Modifier.fillMaxSize()) {
+                    LazyColumn(Modifier.fillMaxSize()) {
+                        item {
+                            StatusMessage(
+                                icon = Icons.Rounded.Bookmark,
+                                title = "저장한 볼거리가 없어요",
+                                description = "마음에 드는 곳을 저장해 두면 여기에 모여요.",
+                                actionLabel = "주변 둘러보기",
+                                onAction = onBrowseNearby,
+                            )
+                        }
+                    }
+                }
+                SavedMode.LIST -> PullToRefreshBox(state.refreshing, onPullRefresh, Modifier.fillMaxSize()) {
+                    SavedList(state, onSpotClick, onRemove, onToggleSelected, onClearEnded = { confirmClear = true })
+                }
             }
         }
     }
@@ -216,6 +244,14 @@ private fun SavedList(
             items(state.ended, key = {
                 it.spot.id
             }) { SavedItem(it, state, now, onSpotClick, onRemove, onToggleSelected) }
+            item(key = "ended-notice") {
+                Text(
+                    "끝난 지 90일이 지나면 자동으로 지워져요.",
+                    style = HereziTheme.typography.caption,
+                    color = HereziTheme.colors.textSecondary,
+                    modifier = Modifier.padding(horizontal = HereziSpace.s5, vertical = HereziSpace.s3),
+                )
+            }
         }
     }
 }
@@ -268,4 +304,22 @@ private fun SavedItem(
             })
         }
     }
+}
+
+/** 로그인 전 본문 (S4 `SignInPrompt`). 브랜드 버튼은 S7 시트에만 둔다. */
+@Composable
+private fun SignInPrompt(deviceSavedCount: Int, onSignIn: () -> Unit, onBrowseNearby: () -> Unit) {
+    StatusMessage(
+        icon = Icons.Rounded.Bookmark,
+        title = "로그인하면 저장할 수 있어요",
+        description = if (deviceSavedCount > 0) {
+            "이 기기에 저장한 볼거리 ${deviceSavedCount}개가 있어요. 로그인하면 계정으로 옮겨 드려요."
+        } else {
+            "저장한 볼거리를 어느 기기에서든 다시 볼 수 있어요."
+        },
+        actionLabel = "로그인",
+        onAction = onSignIn,
+        secondaryLabel = "주변 둘러보기",
+        onSecondary = onBrowseNearby,
+    )
 }

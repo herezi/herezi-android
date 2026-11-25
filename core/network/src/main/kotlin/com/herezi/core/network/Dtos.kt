@@ -23,6 +23,7 @@ data class SpotDto(
     @SerialName("image_url") val imageUrl: String? = null,
     @SerialName("source_url") val sourceUrl: String? = null,
     @SerialName("distance_m") val distanceM: Int? = null,
+    @SerialName("saved_at") val savedAt: String? = null,
 )
 
 /** openapi `SpotPage`. */
@@ -36,3 +37,15 @@ data class SpotMapDto(val items: List<SpotDto>, val truncated: Boolean)
 /** openapi `GeoReverse` (`GET /v1/geo/reverse`). [label] 은 "구 동", 결과가 없으면 빈 문자열. */
 @Serializable
 data class GeoReverseDto(val area1: String, val area2: String, val area3: String, val label: String)
+
+/** openapi `SavedImportRequest` (`POST /v1/me/saved:import`). */
+@Serializable
+data class SavedImportRequestDto(@SerialName("spot_ids") val spotIds: List<String>)
+
+/** openapi `SavedImportResult`. */
+@Serializable
+data class SavedImportResultDto(val imported: Int, @SerialName("skipped_unknown") val skippedUnknown: Int)
+
+/** openapi `Error`. */
+@Serializable
+data class ErrorDto(val code: String, val message: String)

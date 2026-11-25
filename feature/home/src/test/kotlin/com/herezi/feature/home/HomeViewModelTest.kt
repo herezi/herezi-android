@@ -12,10 +12,11 @@ import com.herezi.core.domain.SpotPage
 import com.herezi.core.domain.SpotQuery
 import com.herezi.core.domain.SpotsRepository
 import com.herezi.core.domain.When
+import com.herezi.core.domain.account.LoginReason
+import com.herezi.core.domain.fake.AccountFixture
 import com.herezi.core.domain.fake.FakeLocationSource
 import com.herezi.core.domain.fake.FakeReverseGeocoder
 import com.herezi.core.domain.fake.FakeSpotsRepository
-import com.herezi.core.domain.fake.InMemorySavedSpotsRepository
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -52,7 +53,13 @@ class HomeViewModelTest {
     }
 
     private val clock = MutableClock(start)
-    private val saved = InMemorySavedSpotsRepository()
+    private var account = account(signedIn = true)
+
+    private fun account(signedIn: Boolean) = AccountFixture(
+        kotlinx.coroutines.CoroutineScope(dispatcher),
+        catalog = FakeSpotsRepository.seedSpots(start),
+        signedIn = signedIn,
+    )
 
     private class Recording(private val delegate: SpotsRepository) : SpotsRepository {
         val queries = mutableListOf<SpotQuery>()
@@ -78,7 +85,7 @@ class HomeViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun vm(repo: SpotsRepository, location: FakeLocationSource = FakeLocationSource(), name: String? = null) =
-        HomeViewModel(repo, location, FakeReverseGeocoder(name), saved, clock)
+        HomeViewModel(repo, location, FakeReverseGeocoder(name), account.library, clock)
 
     @Test
     fun `한 번 호출(3km, 이번 주, 100개)로 피드를 만들고 위치 거부면 서울시청 주변`() = runTest(dispatcher) {
@@ -162,6 +169,23 @@ class HomeViewModelTest {
         advanceUntilIdle()
         assertFalse(hero.id in vm.state.value.savedIds)
         assertEquals(listOf("저장했어요", "저장을 취소했어요"), messages)
+    }
+
+    @Test
+    fun `로그아웃 상태에서 저장을 누르면 시트만 띄우고 아이콘은 채우지 않는다`() = runTest(dispatcher) {
+        account = account(signedIn = false)
+        val vm = vm(Recording(FakeSpotsRepository(clock)))
+        val messages = mutableListOf<String>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.messages.collect { messages += it } }
+        advanceUntilIdle()
+        val hero = vm.state.value.feed!!.hero!!.spot
+
+        vm.toggleSave(hero)
+        advanceUntilIdle()
+        assertFalse(hero.id in vm.state.value.savedIds)
+        assertEquals(LoginReason.SAVE, account.library.loginRequest.value?.reason)
+        assertEquals(hero, account.library.loginRequest.value?.pendingSave)
+        assertTrue(messages.isEmpty())
     }
 
     @Test

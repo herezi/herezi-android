@@ -18,6 +18,10 @@ ksp = "2.0.21-1.0.28"
 naverMapSdk = "3.24.1"
 naverMapCompose = "1.8.2"
 datastore = "1.0.0"
+# 카카오 로그인 SDK: https://devrepo.kakao.com/nexus/content/groups/public/ (group com.kakao.sdk 로 제한).
+kakaoSdk = "2.26.0"
+securityCrypto = "1.0.0"
+browser = "1.4.0"
 junit = "4.13.2"
 detekt = "1.23.7"
 spotless = "6.25.0"
@@ -50,6 +54,9 @@ androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-com
 naver-map-sdk = { module = "com.naver.maps:map-sdk", version.ref = "naverMapSdk" }
 naver-map-compose = { module = "io.github.fornewid:naver-map-compose", version.ref = "naverMapCompose" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+kakao-user = { module = "com.kakao.sdk:v2-user", version.ref = "kakaoSdk" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
+androidx-browser = { module = "androidx.browser:browser", version.ref = "browser" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

@@ -6,7 +6,10 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,26 +21,36 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
@@ -45,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.herezi.core.domain.account.AuthProvider
 import com.herezi.core.ui.BundledLicenses
 import com.herezi.core.ui.HereziLinks
 import com.herezi.core.ui.component.HereziToastHost
@@ -59,6 +73,7 @@ fun SettingsRoute(
     onBack: () -> Unit,
     onOpenSources: () -> Unit,
     onOpenLicenses: () -> Unit,
+    onDeleteAccount: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -78,6 +93,11 @@ fun SettingsRoute(
         onOpenSources = onOpenSources,
         onOpenLicenses = onOpenLicenses,
         onOpenUrl = { openUrl(context, it) },
+        account = AccountActions(
+            onSignIn = viewModel::signIn,
+            onSignOut = viewModel::signOut,
+            onDeleteAccount = onDeleteAccount,
+        ),
         onReport = {
             if (!sendReport(context, appVersion)) {
                 scope.launch { toast.showSnackbar("메일 앱이 없어요. ${HereziLinks.SUPPORT_EMAIL} 으로 보내 주세요") }
@@ -86,6 +106,7 @@ fun SettingsRoute(
     )
 }
 
+@Suppress("LongParameterList", "LongMethod")
 @Composable
 fun SettingsScreen(
     state: SettingsUiState,
@@ -96,14 +117,25 @@ fun SettingsScreen(
     onOpenSources: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onOpenLicenses: () -> Unit = {},
+    account: AccountActions = AccountActions(),
     onReport: () -> Unit,
 ) {
+    var confirmSignOut by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = HereziTheme.colors.bgPrimary,
         snackbarHost = { HereziToastHost(toast) },
         topBar = { TitleBar("설정", onBack) },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState())) {
+            GroupTitle("계정")
+            val provider = state.provider
+            if (provider == null) {
+                SettingRow("로그인", hint = "로그인 창이 열려요", onClick = account.onSignIn)
+            } else {
+                AccountRow(provider)
+                SettingRow("로그아웃", onClick = { confirmSignOut = true })
+                SettingRow("회원 탈퇴", secondary = true, onClick = account.onDeleteAccount)
+            }
             GroupTitle("위치")
             SettingRow("위치 권한", value = state.accessLabel, hint = "설정 앱이 열려요", onClick = onLocation)
             GroupTitle("정보")
@@ -133,6 +165,52 @@ fun SettingsScreen(
             Spacer(Modifier.height(HereziSpace.s8))
         }
     }
+    if (confirmSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            title = { Text("로그아웃할까요?") },
+            text = { Text("다시 로그인하면 저장한 볼거리를 그대로 볼 수 있어요.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmSignOut = false
+                    account.onSignOut()
+                }) { Text("로그아웃") }
+            },
+            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("취소") } },
+        )
+    }
+}
+
+/** S6 계정 그룹 동작. */
+data class AccountActions(
+    val onSignIn: () -> Unit = {},
+    val onSignOut: () -> Unit = {},
+    val onDeleteAccount: () -> Unit = {},
+)
+
+/** 제공자 표시 28 + "카카오로 로그인됨". 정적 텍스트(탭 없음), 표시는 장식. */
+@Composable
+private fun AccountRow(provider: AuthProvider) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = HereziSpace.s5),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ProviderMark(provider)
+        Spacer(Modifier.width(HereziSpace.s3))
+        Text(provider.signedInLabel, style = HereziTheme.typography.body, color = HereziTheme.colors.textPrimary)
+    }
+}
+
+@Composable
+private fun ProviderMark(provider: AuthProvider) {
+    val (bg, icon, size) = when (provider) {
+        AuthProvider.KAKAO -> Triple(Color(0xFFFEE500), R.drawable.ic_provider_kakao, 18.dp)
+        AuthProvider.APPLE -> Triple(Color.Black, R.drawable.ic_provider_apple, 16.dp)
+    }
+    Box(
+        Modifier.size(28.dp).clip(CircleShape).background(bg).clearAndSetSemantics { },
+        contentAlignment = Alignment.Center,
+    ) { Image(painterResource(icon), null, Modifier.size(size)) }
 }
 
 /** 정보 출처 (S6 하위 화면). */
@@ -223,6 +301,7 @@ private fun GroupTitle(text: String) {
 @Composable
 private fun SettingRow(
     title: String,
+    secondary: Boolean = false,
     value: String? = null,
     hint: String? = null,
     showChevron: Boolean = true,
@@ -255,7 +334,7 @@ private fun SettingRow(
         Text(
             title,
             style = HereziTheme.typography.body,
-            color = HereziTheme.colors.textPrimary,
+            color = if (secondary) HereziTheme.colors.textSecondary else HereziTheme.colors.textPrimary,
             modifier = Modifier.weight(1f),
         )
         if (value != null) {

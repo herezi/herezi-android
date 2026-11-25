@@ -28,16 +28,16 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 ```
 :app ──▶ :feature:nearby ──▶ :core:map ──▶ :core:domain
    │        └────────────▶ :core:ui ───▶ :core:domain
-   ├──▶ :feature:home · spotdetail · onboarding · saved · search · settings ─▶ :core:ui, :core:domain
+   ├──▶ :feature:home · spotdetail · onboarding · saved · search · settings · auth ─▶ :core:ui, :core:domain
    ├──▶ :core:network ─────▶ :core:domain
    └──▶ :core:data ────────▶ :core:domain
 ```
 
 | 모듈 | 역할 |
 |---|---|
-| `:core:domain` | 순수 Kotlin. `Spot`, `Category`(9종), `When`, `SpotQuery`(`keyword`=검색 `q`), 포트 `SpotsRepository`·`SavedSpotsRepository`·`RecentSearchesRepository`·`AppPreferences`·`LocationSource`, Fake들(`fake/`) |
-| `:core:data` | 기기 로컬 저장(DataStore + JSON): 저장 목록 스냅샷, 최근 검색, S0 노출 여부 |
-| `:core:network` | `HereziApi`(Retrofit), DTO(계약 그대로 snake_case), `toDomain()` 매핑, `LiveSpotsRepository` |
+| `:core:domain` | 순수 Kotlin. `Spot`, `Category`(9종), `When`, `SpotQuery`(`keyword`=검색 `q`), 포트 `SpotsRepository`·`SavedSpotsRepository`(기기 로컬, 옮기기 원본)·`RecentSearchesRepository`·`AppPreferences`·`LocationSource`. `account/`: `AuthService`(세션·리프레시·401 재시도), `SavedLibrary`(계정 저장·로그인 요청·옮기기·탈퇴), 포트 `AuthBackend`·`SessionStore`·`AccountApi`·`SavedCache`·`SocialLogin`. Fake들(`fake/`, `AccountFixture`) |
+| `:core:data` | 기기 로컬 저장(DataStore + JSON): 기기 저장 스냅샷, 계정 저장 캐시, 최근 검색, S0 노출 여부. 세션은 `EncryptedSessionStore`(EncryptedSharedPreferences) |
+| `:core:network` | `HereziApi`(Retrofit), DTO(계약 그대로 snake_case), `toDomain()` 매핑, `LiveSpotsRepository`, `LiveAccountApi`(`/v1/me/…`), `SupabaseAuthBackend`(OkHttp, Supabase Auth REST) |
 | `:core:ui` | DESIGN.md 토큰(`HereziTheme.colors`/`typography`, `HereziSpace`·`Radius`·`Motion` 등, 카테고리 색·아이콘), 공통 컴포넌트(`SpotCard`·배지·버튼·상태 화면·토스트), 이미지 로더(`RemoteImage`·`HereziImageLoader`, 라이브러리 없음), Pretendard 글꼴(`res/font`, OFL 원문 `res/raw`), 한국어 문구·포맷 |
 | `:core:map` | `SpotMap` 컴포저블 — 네이버 지도 SDK를 쓰는 **유일한** 모듈. 원형 카테고리 핀·SDK `Clusterer` 묶음·선택 핀(비트맵으로 그림), `PinStyle`로 색·아이콘·글꼴을 받는다. `LocalMapConfig`로 키 유무 전달 |
 | `:feature:home` | S1 홈 사진 카드 피드 (`HomeFeedBuilder` 섹션은 `:core:domain` 의 순수 함수) |
@@ -46,8 +46,9 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 | `:feature:onboarding` | S0 위치 권한 안내 |
 | `:feature:saved` | S4 저장 목록 (재조회, 끝난 볼거리, 편집·되돌리기) |
 | `:feature:search` | S5 검색 (`q`, 최근 검색) |
-| `:feature:settings` | S6 설정 (위치 권한, 정보 출처, 오류 제보) |
-| `:app` | 조립 루트: `HereziApplication`(Hilt), `MainActivity`, 하단 탭(주변·지도·저장)과 내비게이션, `DataModule`(Fake/Live 선택), `AndroidLocationSource` |
+| `:feature:settings` | S6 설정 (계정·로그아웃·회원 탈퇴, 위치 권한, 정보 출처, 오류 제보) |
+| `:feature:auth` | S7 로그인 시트(`LoginSheet`·`LoginViewModel`). :app 뼈대가 `SavedLibrary.loginRequest` 를 보고 띄운다 |
+| `:app` | 조립 루트: `HereziApplication`(Hilt), `MainActivity`(Apple 웹 로그인 딥링크), 하단 탭(주변·지도·저장)과 내비게이션, `DataModule`·`AccountModule`(Fake/Live 선택), `AndroidLocationSource`, `auth/`(카카오 SDK·Custom Tabs — 카카오 SDK 는 :app 에서만) |
 
 ### 모듈 규칙
 
@@ -81,7 +82,15 @@ sdk.dir=/Users/<you>/Library/Android/sdk
 NAVER_MAP_CLIENT_ID=...
 # 선택. 없으면 FakeSpotsRepository(서버 불필요). 에뮬레이터→로컬 서버: http://10.0.2.2:8080/
 HEREZI_API_BASE_URL=
+# 선택. 로그인(S7). 없으면 빌드·테스트는 되고 로그인만 실패 문구.
+KAKAO_NATIVE_APP_KEY=
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
 ```
+
+- 카카오 SDK 는 `https://devrepo.kakao.com/nexus/content/groups/public/` 에서 받는다(그룹 `com.kakao.sdk` 로 제한).
+- 카카오 콘솔: Android 플랫폼에 패키지 `com.herezi.app` + **키 해시**(디버그 키, Play 앱 서명 키 둘 다), OpenID Connect 활성화.
+- Supabase Auth Redirect URLs 에 `herezi://auth-callback`(Apple 웹 로그인 복귀).
 
 ## 작업 규칙
 
