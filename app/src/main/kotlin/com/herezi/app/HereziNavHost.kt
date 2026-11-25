@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.Explore
 import androidx.compose.material.icons.rounded.Map
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -21,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -60,11 +62,12 @@ import com.herezi.feature.spotdetail.SpotDetailRoute
 import com.herezi.feature.spotdetail.SpotDetailViewModel
 import java.net.URLEncoder
 
-/** 탭 (DESIGN.md §6.12): 주변(S1 홈 → S1b) · 지도(S2) · 저장(S4, 우상단 톱니 → S6). */
+/** 탭 (DESIGN.md §6.12): 주변(S1 홈 → S1b) · 지도(S2) · 저장(S4) · MY(S6 설정이 탭 루트). */
 private enum class Tab(val graph: String, val label: String, val icon: ImageVector) {
     NEARBY("tab/nearby", "주변", Icons.Rounded.Explore),
     MAP("tab/map", "지도", Icons.Rounded.Map),
     SAVED("tab/saved", "저장", Icons.Rounded.Bookmark),
+    MY("tab/my", "MY", Icons.Rounded.Person),
 }
 
 private const val HOME = "home"
@@ -99,6 +102,8 @@ fun HereziApp(app: AppViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val toast = remember { SnackbarHostState() }
     LaunchedEffect(app) { app.messages.collect { toast.showSnackbar(it) } }
+    // 선택된 MY 탭을 다시 누를 때마다 올려서 S6 를 맨 위로 스크롤한다.
+    var myReselect by remember { mutableIntStateOf(0) }
     val loginRequest by app.loginRequest.collectAsStateWithLifecycle()
     loginRequest?.let { request ->
         LoginSheetRoute(request = request, onDismiss = app::dismissLogin, onOpenUrl = { openInApp(context, it) })
@@ -113,7 +118,12 @@ fun HereziApp(app: AppViewModel = hiltViewModel()) {
                     NavigationBarItem(
                         selected = selected,
                         onClick = {
-                            if (selected) nav.popBackStack(tab.graph, inclusive = false) else nav.switchTab(tab)
+                            if (selected) {
+                                nav.popToStart(tab)
+                                if (tab == Tab.MY) myReselect++
+                            } else {
+                                nav.switchTab(tab)
+                            }
                         },
                         icon = { Icon(tab.icon, contentDescription = null) },
                         label = { Text(tab.label, style = HereziTheme.typography.micro) },
@@ -129,7 +139,7 @@ fun HereziApp(app: AppViewModel = hiltViewModel()) {
             }
         },
     ) { padding ->
-        HereziNavHost(nav, Modifier.padding(padding))
+        HereziNavHost(nav, myReselect, Modifier.padding(padding))
     }
 }
 
@@ -139,12 +149,29 @@ private fun NavHostController.switchTab(tab: Tab, restore: Boolean = true) = nav
     restoreState = restore
 }
 
+/** 탭 첫 화면 route (navigation 그래프의 startDestination). */
+private val Tab.start: String
+    get() = when (this) {
+        Tab.NEARBY -> HOME
+        Tab.MAP -> MAP
+        Tab.SAVED -> SAVED
+        Tab.MY -> SETTINGS
+    }
+
+/**
+ * 선택된 탭을 다시 눌렀을 때: 그 탭의 첫 화면만 남긴다(§6.12).
+ * 그래프 route(tab.graph)로 pop 하면 첫 화면까지 빠져 다른 탭 화면이 보였다.
+ */
+private fun NavHostController.popToStart(tab: Tab) {
+    if (!popBackStack(tab.start, inclusive = false)) switchTab(tab)
+}
+
 /** 화면 연결은 여기서만 한다. feature 끼리는 서로 모른다. */
 @Composable
-private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
+private fun HereziNavHost(nav: NavHostController, myReselect: Int, modifier: Modifier) {
     val context = LocalContext.current
     NavHost(navController = nav, startDestination = Tab.NEARBY.graph, modifier = modifier) {
-        navigation(route = Tab.NEARBY.graph, startDestination = HOME) {
+        navigation(route = Tab.NEARBY.graph, startDestination = Tab.NEARBY.start) {
             composable(HOME) {
                 HomeRoute(
                     onSpotClick = { nav.openSpot(Tab.NEARBY, it) },
@@ -173,7 +200,7 @@ private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
             }
             spotDetail(nav, Tab.NEARBY)
         }
-        navigation(route = Tab.MAP.graph, startDestination = MAP) {
+        navigation(route = Tab.MAP.graph, startDestination = Tab.MAP.start) {
             composable(MAP, arguments = filterArguments()) {
                 MapRoute(
                     onSpotClick = { nav.openSpot(Tab.MAP, it) },
@@ -190,18 +217,20 @@ private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
             }
             spotDetail(nav, Tab.MAP)
         }
-        navigation(route = Tab.SAVED.graph, startDestination = SAVED) {
+        navigation(route = Tab.SAVED.graph, startDestination = Tab.SAVED.start) {
             composable(SAVED) {
                 SavedRoute(
                     onSpotClick = { nav.openSpot(Tab.SAVED, it) },
                     onBrowseNearby = { nav.switchTab(Tab.NEARBY) },
-                    onSettings = { nav.navigate(SETTINGS) },
                 )
             }
+            spotDetail(nav, Tab.SAVED)
+        }
+        navigation(route = Tab.MY.graph, startDestination = Tab.MY.start) {
             composable(SETTINGS) {
                 SettingsRoute(
                     appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                    onBack = { nav.popBackStack() },
+                    scrollToTop = myReselect,
                     onOpenSources = { nav.navigate(SOURCES) },
                     onOpenLicenses = { nav.navigate(LICENSES) },
                     onDeleteAccount = { nav.navigate(DELETE_ACCOUNT) },
@@ -221,7 +250,6 @@ private fun HereziNavHost(nav: NavHostController, modifier: Modifier) {
             }
             composable(SOURCES) { SourcesScreen(onBack = { nav.popBackStack() }) }
             composable(LICENSES) { LicensesScreen(onBack = { nav.popBackStack() }) }
-            spotDetail(nav, Tab.SAVED)
         }
     }
 }

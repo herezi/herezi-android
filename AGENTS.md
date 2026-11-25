@@ -46,9 +46,9 @@ Kotlin 2.0, Jetpack Compose(Material 3), Hilt(KSP), Retrofit + kotlinx.serializa
 | `:feature:onboarding` | S0 위치 권한 안내 |
 | `:feature:saved` | S4 저장 목록 (재조회, 끝난 볼거리, 편집·되돌리기) |
 | `:feature:search` | S5 검색 (`q`, 최근 검색) |
-| `:feature:settings` | S6 설정 (계정·로그아웃·회원 탈퇴, 위치 권한, 정보 출처, 오류 제보) |
+| `:feature:settings` | S6 설정 = MY 탭 루트 (계정·로그아웃·회원 탈퇴, 위치 권한, 정보 출처, 오류 제보) |
 | `:feature:auth` | S7 로그인 시트(`LoginSheet`·`LoginViewModel`, 카카오만). :app 뼈대가 `SavedLibrary.loginRequest` 를 보고 띄운다 |
-| `:app` | 조립 루트: `HereziApplication`(Hilt), `MainActivity`, 하단 탭(주변·지도·저장)과 내비게이션, `DataModule`·`AccountModule`(Fake/Live 선택), `AndroidLocationSource`, `auth/`(카카오 SDK — :app 에서만) |
+| `:app` | 조립 루트: `HereziApplication`(Hilt), `MainActivity`, 하단 탭(주변·지도·저장·MY)과 내비게이션, `DataModule`·`AccountModule`(Fake/Live 선택), `AndroidLocationSource`, `auth/`(카카오 SDK — :app 에서만) |
 
 ### 모듈 규칙
 
