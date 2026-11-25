@@ -4,20 +4,19 @@ import androidx.lifecycle.SavedStateHandle
 import com.herezi.core.domain.GeoPoint
 import com.herezi.core.domain.MapQuery
 import com.herezi.core.domain.MapSpots
-import com.herezi.core.domain.SavedSpot
 import com.herezi.core.domain.Spot
 import com.herezi.core.domain.SpotPage
 import com.herezi.core.domain.SpotQuery
 import com.herezi.core.domain.SpotsRepository
+import com.herezi.core.domain.account.LoginReason
+import com.herezi.core.domain.fake.AccountFixture
 import com.herezi.core.domain.fake.FakeLocationSource
 import com.herezi.core.domain.fake.FakeSpotsRepository
-import com.herezi.core.domain.fake.InMemorySavedSpotsRepository
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -28,7 +27,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -38,7 +37,14 @@ class SpotDetailViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val clock = Clock.fixed(Instant.parse("2026-11-18T03:00:00Z"), ZoneOffset.UTC)
     private val fake = FakeSpotsRepository(clock)
-    private val saved = InMemorySavedSpotsRepository()
+    private var account = account(signedIn = true)
+
+    private fun account(signedIn: Boolean, extra: List<Spot> = emptyList()) = AccountFixture(
+        kotlinx.coroutines.CoroutineScope(dispatcher),
+        catalog = FakeSpotsRepository.seedSpots(clock.instant()) + extra,
+        signedIn = signedIn,
+        clock = clock,
+    )
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -53,9 +59,8 @@ class SpotDetailViewModelTest {
     ) = SpotDetailViewModel(
         SavedStateHandle(mapOf(SpotDetailViewModel.ARG_SPOT_ID to id)),
         repo,
-        saved,
+        account.library,
         location,
-        clock,
     )
 
     private class FailingRepository : SpotsRepository {
@@ -104,7 +109,7 @@ class SpotDetailViewModelTest {
     }
 
     @Test
-    fun `저장 토글은 저장소에 반영하고 토스트를 보낸다`() = runTest(dispatcher) {
+    fun `저장 토글은 계정에 반영하고 토스트를 보낸다`() = runTest(dispatcher) {
         val vm = viewModel("fake:yeouido-cherry")
         val messages = mutableListOf<String>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.messages.collect { messages += it } }
@@ -113,7 +118,8 @@ class SpotDetailViewModelTest {
         vm.toggleSave()
         advanceUntilIdle()
         assertTrue(vm.saved.value)
-        assertEquals(clock.instant(), saved.get("fake:yeouido-cherry")!!.savedAt)
+        assertTrue("fake:yeouido-cherry" in account.api.saved)
+        assertEquals(clock.instant(), account.library.get("fake:yeouido-cherry")!!.savedAt)
 
         vm.toggleSave()
         advanceUntilIdle()
@@ -122,9 +128,38 @@ class SpotDetailViewModelTest {
     }
 
     @Test
+    fun `로그아웃 상태에서 저장하면 시트를 띄우고 아이콘은 그대로`() = runTest(dispatcher) {
+        account = account(signedIn = false)
+        val vm = viewModel("fake:yeouido-cherry")
+        val messages = mutableListOf<String>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.messages.collect { messages += it } }
+        advanceUntilIdle()
+
+        vm.toggleSave()
+        advanceUntilIdle()
+        assertFalse(vm.saved.value)
+        assertEquals(LoginReason.SAVE, account.library.loginRequest.value?.reason)
+        assertTrue(messages.isEmpty())
+    }
+
+    @Test
+    fun `저장 실패면 아이콘을 되돌리고 토스트`() = runTest(dispatcher) {
+        val vm = viewModel("fake:yeouido-cherry")
+        val messages = mutableListOf<String>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.messages.collect { messages += it } }
+        advanceUntilIdle()
+        account.api.failNext = com.herezi.core.domain.account.AuthException.Offline()
+
+        vm.toggleSave()
+        advanceUntilIdle()
+        assertFalse(vm.saved.value)
+        assertEquals(listOf("저장하지 못했어요. 다시 눌러 주세요."), messages)
+    }
+
+    @Test
     fun `저장된 항목은 스냅샷으로 먼저 그리고 실패하면 화면을 유지하며 토스트`() = runTest(dispatcher) {
         val snapshot = fake.spot("fake:yeouido-cherry")!!
-        saved.save(snapshot, clock.instant())
+        account.library.save(snapshot)
         val vm = viewModel("fake:yeouido-cherry", repo = FailingRepository())
         val messages = mutableListOf<String>()
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.messages.collect { messages += it } }
@@ -142,28 +177,18 @@ class SpotDetailViewModelTest {
     }
 
     @Test
-    fun `저장된 항목이 404면 종료로 표시하고 저장에서 지울 수 있다`() = runTest(dispatcher) {
+    fun `저장된 항목이 404면 저장에서 지울 수 있다`() = runTest(dispatcher) {
         val gone = fake.spot("fake:yeouido-cherry")!!.copy(id = "gone")
-        saved.restore(SavedSpot(gone, clock.instant()))
+        account = account(signedIn = true, extra = listOf(gone))
+        account.library.save(gone)
         val vm = viewModel("gone")
         advanceUntilIdle()
 
         assertEquals(SpotDetailUiState.NotFound(saved = true), vm.state.value)
-        assertTrue(saved.get("gone")!!.spot.isEnded)
 
         vm.removeFromSaved()
         advanceUntilIdle()
-        assertEquals(null, saved.get("gone"))
+        assertNull(account.library.get("gone"))
         assertEquals(SpotDetailUiState.NotFound(saved = false), vm.state.value)
-    }
-
-    @Test
-    fun `상세를 받으면 저장 스냅샷을 새로 고친다`() = runTest(dispatcher) {
-        val old = fake.spot("fake:yeouido-cherry")!!.copy(title = "옛 제목")
-        saved.save(old, clock.instant())
-        viewModel("fake:yeouido-cherry")
-        advanceUntilIdle()
-        assertEquals("여의도 봄꽃 축제", saved.saved.first().single().spot.title)
-        assertNotNull(saved.get("fake:yeouido-cherry"))
     }
 }

@@ -1,6 +1,12 @@
 package com.herezi.core.network
 
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -41,4 +47,34 @@ interface HereziApi {
     /** 좌표 → 위치명(네이버 역지오코딩, 서버 경유). 키 없음 501, 네이버 실패 502. */
     @GET("v1/geo/reverse")
     suspend fun reverseGeocode(@Query("lat") lat: Double, @Query("lng") lng: Double): GeoReverseDto
+
+    // ---- 계정 (`/v1/me/…`, Bearer Supabase access token) ----
+
+    @GET("v1/me/saved")
+    suspend fun listSaved(
+        @Header("Authorization") authorization: String,
+        @Query("cursor") cursor: String? = null,
+        @Query("limit") limit: Int? = null,
+    ): SpotPageDto
+
+    @PUT("v1/me/saved/{spot_id}")
+    suspend fun saveSpot(
+        @Header("Authorization") authorization: String,
+        @Path("spot_id") spotId: String,
+    ): Response<Unit>
+
+    @DELETE("v1/me/saved/{spot_id}")
+    suspend fun unsaveSpot(
+        @Header("Authorization") authorization: String,
+        @Path("spot_id") spotId: String,
+    ): Response<Unit>
+
+    @POST("v1/me/saved:import")
+    suspend fun importSaved(
+        @Header("Authorization") authorization: String,
+        @Body body: SavedImportRequestDto,
+    ): SavedImportResultDto
+
+    @DELETE("v1/me")
+    suspend fun deleteMe(@Header("Authorization") authorization: String): Response<Unit>
 }

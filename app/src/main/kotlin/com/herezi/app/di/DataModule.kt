@@ -2,8 +2,12 @@ package com.herezi.app.di
 
 import android.content.Context
 import com.herezi.app.BuildConfig
+import com.herezi.app.auth.ActivityTracker
+import com.herezi.app.auth.AndroidSocialLogin
+import com.herezi.app.auth.WebAuthFlow
 import com.herezi.app.location.AndroidLocationSource
 import com.herezi.app.location.AndroidReverseGeocoder
+import com.herezi.core.data.EncryptedSessionStore
 import com.herezi.core.data.LocalStores
 import com.herezi.core.domain.AppPreferences
 import com.herezi.core.domain.LocationSource
@@ -12,16 +16,27 @@ import com.herezi.core.domain.ReverseGeocoder
 import com.herezi.core.domain.SavedSpotsRepository
 import com.herezi.core.domain.ServerFirstGeocoder
 import com.herezi.core.domain.SpotsRepository
+import com.herezi.core.domain.account.AccountApi
+import com.herezi.core.domain.account.AuthService
+import com.herezi.core.domain.account.SavedLibrary
+import com.herezi.core.domain.account.SocialLogin
+import com.herezi.core.domain.fake.FakeAccountApi
 import com.herezi.core.domain.fake.FakeSpotsRepository
 import com.herezi.core.network.HereziApiFactory
+import com.herezi.core.network.LiveAccountApi
 import com.herezi.core.network.LiveSpotsRepository
+import com.herezi.core.network.SupabaseAuthBackend
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.time.Clock
+import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /**
  * 데이터 저장소 선택. HEREZI_API_BASE_URL 이 비어 있으면 서버 없이 Fake 로 동작한다.
@@ -43,8 +58,9 @@ object DataModule {
     @Singleton
     fun localStores(@ApplicationContext context: Context): LocalStores = LocalStores.create(context)
 
+    /** 기기 로컬 저장(v1.3 이전). 첫 로그인 때 계정으로 옮길 원본. */
     @Provides
-    fun savedSpots(stores: LocalStores): SavedSpotsRepository = stores.saved
+    fun deviceSavedSpots(stores: LocalStores): SavedSpotsRepository = stores.saved
 
     @Provides
     fun recentSearches(stores: LocalStores): RecentSearchesRepository = stores.recentSearches
@@ -64,3 +80,60 @@ object DataModule {
     @Provides
     fun clock(): Clock = Clock.systemUTC()
 }
+
+/** 계정 (S4·S6·S7): Supabase 세션, `/v1/me/…`, 로그인 화면, 저장 목록. */
+@Module
+@InstallIn(SingletonComponent::class)
+object AccountModule {
+    /** 앱 전체 범위(화면이 사라져도 로그인 후 처리·저장 요청이 끝까지 간다). */
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun applicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    @Provides
+    @Singleton
+    fun activityTracker(): ActivityTracker = ActivityTracker()
+
+    @Provides
+    @Singleton
+    fun webAuthFlow(): WebAuthFlow = WebAuthFlow()
+
+    @Provides
+    @Singleton
+    fun socialLogin(activities: ActivityTracker, web: WebAuthFlow): SocialLogin =
+        AndroidSocialLogin(activities, web, kakaoConfigured = BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank())
+
+    @Provides
+    @Singleton
+    fun authService(@ApplicationContext context: Context, clock: Clock): AuthService = AuthService(
+        SupabaseAuthBackend(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY, clock = clock),
+        EncryptedSessionStore(context),
+        clock,
+    )
+
+    /** 서버 없이(Fake) 돌 때는 계정 API 도 메모리 Fake. */
+    @Provides
+    @Singleton
+    fun accountApi(): AccountApi = if (BuildConfig.API_BASE_URL.isBlank()) {
+        FakeAccountApi(FakeSpotsRepository.seedSpots(java.time.Instant.now()).associateBy { it.id })
+    } else {
+        LiveAccountApi(HereziApiFactory.create(BuildConfig.API_BASE_URL))
+    }
+
+    @Suppress("LongParameterList")
+    @Provides
+    @Singleton
+    fun savedLibrary(
+        auth: AuthService,
+        api: AccountApi,
+        stores: LocalStores,
+        social: SocialLogin,
+        clock: Clock,
+        @ApplicationScope scope: CoroutineScope,
+    ): SavedLibrary = SavedLibrary(auth, api, stores.savedCache, stores.saved, social, clock, scope)
+}
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class ApplicationScope

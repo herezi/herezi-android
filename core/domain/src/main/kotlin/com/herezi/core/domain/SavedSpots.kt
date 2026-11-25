@@ -3,10 +3,13 @@ package com.herezi.core.domain
 import java.time.Instant
 import kotlinx.coroutines.flow.Flow
 
-/** 저장(찜)한 볼거리. 가입 없이 기기에만 두는 스냅샷과 저장 시각. */
+/** 저장(찜)한 볼거리. 스냅샷과 저장 시각(계정 목록은 서버 `saved_at`). */
 data class SavedSpot(val spot: Spot, val savedAt: Instant)
 
-/** 저장 목록 포트 (S3 저장 토글, S4 저장 목록). 구현: :core:data, 테스트는 fake. */
+/**
+ * 기기 로컬 저장(v1.3 이전 앱이 쓰던 것). 이제 화면은 계정 저장([com.herezi.core.domain.account.SavedLibrary])을 쓰고,
+ * 이 저장소는 첫 로그인 때 `saved:import` 로 옮길 원본으로만 남는다. 구현: :core:data, 테스트는 fake.
+ */
 interface SavedSpotsRepository {
     /** 저장 시각 최신순. */
     val saved: Flow<List<SavedSpot>>

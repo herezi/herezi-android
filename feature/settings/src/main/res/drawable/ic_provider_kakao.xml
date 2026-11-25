@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 카카오 말풍선 자리 표시(목업과 같음). 카카오 디자인 가이드 배포 리소스로 교체해야 한다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,3C6.48,3 2,6.48 2,10.77c0,2.78 1.86,5.21 4.66,6.58l-0.95,3.48c-0.08,0.3 0.26,0.54 0.52,0.37l4.13,-2.74c0.54,0.07 1.08,0.11 1.64,0.11 5.52,0 10,-3.48 10,-7.8S17.52,3 12,3z" />
+</vector>

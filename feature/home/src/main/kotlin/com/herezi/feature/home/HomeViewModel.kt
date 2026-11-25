@@ -6,11 +6,12 @@ import com.herezi.core.domain.HomeFeed
 import com.herezi.core.domain.HomeFeedBuilder
 import com.herezi.core.domain.LocationSource
 import com.herezi.core.domain.ReverseGeocoder
-import com.herezi.core.domain.SavedSpotsRepository
 import com.herezi.core.domain.Spot
 import com.herezi.core.domain.SpotQuery
 import com.herezi.core.domain.SpotsRepository
 import com.herezi.core.domain.When
+import com.herezi.core.domain.account.SaveOutcome
+import com.herezi.core.domain.account.SavedLibrary
 import com.herezi.core.domain.origin
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Clock
@@ -54,7 +55,7 @@ constructor(
     private val repository: SpotsRepository,
     private val location: LocationSource,
     private val geocoder: ReverseGeocoder,
-    private val savedSpots: SavedSpotsRepository,
+    private val library: SavedLibrary,
     private val clock: Clock,
 ) : ViewModel() {
     private val _state = MutableStateFlow(HomeUiState())
@@ -68,7 +69,7 @@ constructor(
 
     init {
         viewModelScope.launch {
-            savedSpots.saved.collect { list ->
+            library.items.collect { list ->
                 _state.update { it.copy(savedIds = list.map { s -> s.spot.id }.toSet()) }
             }
         }
@@ -84,14 +85,14 @@ constructor(
         if (Duration.between(last, clock.instant()) > STALE_AFTER) load()
     }
 
+    /** 로그아웃이면 S7 시트만 띄운다(아이콘은 채우지 않음). */
     fun toggleSave(spot: Spot) {
         viewModelScope.launch {
-            if (spot.id in _state.value.savedIds) {
-                savedSpots.remove(listOf(spot.id))
-                _messages.send(MSG_UNSAVED)
-            } else {
-                savedSpots.save(spot, clock.instant())
-                _messages.send(MSG_SAVED)
+            when (val outcome = library.toggle(spot)) {
+                SaveOutcome.NeedsLogin -> Unit
+                SaveOutcome.Saved -> _messages.send(MSG_SAVED)
+                SaveOutcome.Removed -> _messages.send(MSG_UNSAVED)
+                is SaveOutcome.Failed -> _messages.send(outcome.message)
             }
         }
     }

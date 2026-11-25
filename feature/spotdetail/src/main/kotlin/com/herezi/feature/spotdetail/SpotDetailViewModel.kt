@@ -5,13 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.herezi.core.domain.LocationSource
 import com.herezi.core.domain.Origin
-import com.herezi.core.domain.SavedSpotsRepository
 import com.herezi.core.domain.Spot
 import com.herezi.core.domain.SpotsRepository
+import com.herezi.core.domain.account.SaveOutcome
+import com.herezi.core.domain.account.SavedLibrary
 import com.herezi.core.domain.distanceTo
 import com.herezi.core.domain.origin
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.Clock
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -43,9 +43,8 @@ class SpotDetailViewModel
 constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: SpotsRepository,
-    private val savedSpots: SavedSpotsRepository,
+    private val library: SavedLibrary,
     private val location: LocationSource,
-    private val clock: Clock,
 ) : ViewModel() {
     private val spotId: String = checkNotNull(savedStateHandle[ARG_SPOT_ID]) { "$ARG_SPOT_ID 인자가 없다" }
 
@@ -53,7 +52,7 @@ constructor(
     val state: StateFlow<SpotDetailUiState> = _state.asStateFlow()
 
     val saved: StateFlow<Boolean> =
-        savedSpots.isSaved(spotId).stateIn(viewModelScope, SharingStarted.Eagerly, false)
+        library.isSaved(spotId).stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _messages = Channel<String>(Channel.BUFFERED)
 
@@ -70,21 +69,14 @@ constructor(
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             // 저장 목록에서 들어오면 스냅샷으로 먼저 그린다(빈 화면 없이).
-            val shown = (_state.value as? SpotDetailUiState.Loaded)?.spot ?: savedSpots.get(spotId)?.spot
+            val shown = (_state.value as? SpotDetailUiState.Loaded)?.spot ?: library.get(spotId)?.spot
             _state.value = shown?.let { withDistance(it) } ?: SpotDetailUiState.Loading
             try {
                 val fresh = repository.spot(spotId)
-                if (fresh == null) {
-                    val wasSaved = savedSpots.get(spotId) != null
-                    _state.value = SpotDetailUiState.NotFound(saved = wasSaved)
-                    if (wasSaved) {
-                        savedSpots.get(spotId)?.let {
-                            savedSpots.updateSnapshot(it.spot.copy(isEnded = true))
-                        }
-                    }
+                _state.value = if (fresh == null) {
+                    SpotDetailUiState.NotFound(saved = library.get(spotId) != null)
                 } else {
-                    _state.value = withDistance(fresh)
-                    savedSpots.updateSnapshot(fresh)
+                    withDistance(fresh)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -98,25 +90,21 @@ constructor(
         }
     }
 
+    /** 로그아웃이면 S7 시트가 뜨고(아이콘은 그대로), 로그인 후 저장은 [SavedLibrary] 가 마친다. */
     fun toggleSave() {
         val spot = (_state.value as? SpotDetailUiState.Loaded)?.spot ?: return
-        viewModelScope.launch {
-            if (saved.value || savedSpots.get(spotId) != null) {
-                savedSpots.remove(listOf(spotId))
-                _messages.send(MSG_UNSAVED)
-            } else {
-                savedSpots.save(spot, clock.instant())
-                _messages.send(MSG_SAVED)
-            }
-        }
+        viewModelScope.launch { outcomeMessage(library.toggle(spot))?.let { _messages.send(it) } }
     }
 
     /** 404 화면의 "저장에서 지우기". */
     fun removeFromSaved() {
         viewModelScope.launch {
-            savedSpots.remove(listOf(spotId))
-            _state.value = SpotDetailUiState.NotFound(saved = false)
-            _messages.send(MSG_UNSAVED)
+            if (library.remove(listOf(spotId))) {
+                _state.value = SpotDetailUiState.NotFound(saved = false)
+                _messages.send(MSG_UNSAVED)
+            } else {
+                _messages.send(SavedLibrary.MSG_REMOVE_FAILED)
+            }
         }
     }
 
@@ -130,6 +118,14 @@ constructor(
     }
 
     companion object {
+        /** 저장 버튼 결과 → 토스트. 로그인 시트가 뜬 경우는 문구 없음. */
+        fun outcomeMessage(outcome: SaveOutcome): String? = when (outcome) {
+            SaveOutcome.NeedsLogin -> null
+            SaveOutcome.Saved -> MSG_SAVED
+            SaveOutcome.Removed -> MSG_UNSAVED
+            is SaveOutcome.Failed -> outcome.message
+        }
+
         /** 내비게이션 인자 이름. :app 의 라우트와 같아야 한다. */
         const val ARG_SPOT_ID = "spotId"
 

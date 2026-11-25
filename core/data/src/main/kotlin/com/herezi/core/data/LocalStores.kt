@@ -25,6 +25,7 @@ class LocalStores private constructor(store: DataStore<Preferences>) {
     val saved: SavedSpotsRepository = DataStoreSavedSpots(store)
     val recentSearches: RecentSearchesRepository = DataStoreRecentSearches(store)
     val preferences: AppPreferences = DataStoreAppPreferences(store)
+    val savedCache: com.herezi.core.domain.account.SavedCache = DataStoreSavedCache(store)
 
     companion object {
         fun create(context: Context): LocalStores = LocalStores(context.applicationContext.hereziStore)
