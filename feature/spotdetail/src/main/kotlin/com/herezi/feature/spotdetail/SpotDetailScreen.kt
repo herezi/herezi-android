@@ -89,6 +89,7 @@ import com.herezi.core.ui.formatDistance
 import com.herezi.core.ui.formatEndedNotice
 import com.herezi.core.ui.formatFetchedAt
 import com.herezi.core.ui.label
+import com.herezi.core.ui.link.openInAppBrowser
 import com.herezi.core.ui.sourceLabel
 import com.herezi.core.ui.spokenDateTime
 import com.herezi.core.ui.spokenPeriod
@@ -117,7 +118,7 @@ fun SpotDetailRoute(onBack: () -> Unit, onBrowseNearby: () -> Unit, viewModel: S
             onShare = { share(context, it) },
             onDirections = { spot, distance -> openNaver(context, spot, distance, place = false) },
             onShowPlace = { spot -> openNaver(context, spot, null, place = true) },
-            onOpenSource = { url -> openUrl(context, url) },
+            onOpenSource = { url -> openInAppBrowser(context, url) },
             onReport = { spot -> sendReport(context, spot) },
             onCopyAddress = { address ->
                 copy(context, address)
@@ -456,15 +457,7 @@ private fun openNaver(context: Context, spot: Spot, distanceM: Int?, place: Bool
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(app)))
     } catch (_: ActivityNotFoundException) {
         val web = if (place) NaverMapDirections.placeWebUri(spot) else NaverMapDirections.webUri(spot, distanceM)
-        openUrl(context, web)
-    }
-}
-
-private fun openUrl(context: Context, url: String) {
-    try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    } catch (_: ActivityNotFoundException) {
-        // 브라우저가 없는 기기: 조용히 무시.
+        openInAppBrowser(context, web)
     }
 }
 

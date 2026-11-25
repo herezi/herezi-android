@@ -1,11 +1,9 @@
 package com.herezi.app
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmark
@@ -44,6 +42,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.herezi.core.domain.ListFilter
 import com.herezi.core.ui.component.HereziToastHost
+import com.herezi.core.ui.link.openInAppBrowser
 import com.herezi.core.ui.theme.HereziColors
 import com.herezi.core.ui.theme.HereziTheme
 import com.herezi.feature.auth.LoginSheetRoute
@@ -106,7 +105,7 @@ fun HereziApp(app: AppViewModel = hiltViewModel()) {
     var myReselect by remember { mutableIntStateOf(0) }
     val loginRequest by app.loginRequest.collectAsStateWithLifecycle()
     loginRequest?.let { request ->
-        LoginSheetRoute(request = request, onDismiss = app::dismissLogin, onOpenUrl = { openInApp(context, it) })
+        LoginSheetRoute(request = request, onDismiss = app::dismissLogin, onOpenUrl = { openInAppBrowser(context, it) })
     }
     Scaffold(
         containerColor = HereziTheme.colors.bgPrimary,
@@ -289,15 +288,6 @@ private fun NavGraphBuilder.spotDetail(nav: NavHostController, tab: Tab) {
 
 private fun NavHostController.openSpot(tab: Tab, id: String) =
     navigate("${tab.name.lowercase()}/spot/${URLEncoder.encode(id, "UTF-8")}")
-
-/** 약관 등: Custom Tabs(인앱 브라우저). 없으면 일반 브라우저, 그것도 없으면 무시. */
-private fun openInApp(context: Context, url: String) {
-    try {
-        CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, Uri.parse(url))
-    } catch (_: ActivityNotFoundException) {
-        // 브라우저 없음.
-    }
-}
 
 private fun openAppSettings(context: Context) {
     context.startActivity(

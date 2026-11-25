@@ -63,6 +63,7 @@ import com.herezi.core.domain.account.AuthProvider
 import com.herezi.core.ui.BundledLicenses
 import com.herezi.core.ui.HereziLinks
 import com.herezi.core.ui.component.HereziToastHost
+import com.herezi.core.ui.link.openInAppBrowser
 import com.herezi.core.ui.theme.HereziSpace
 import com.herezi.core.ui.theme.HereziTheme
 import kotlinx.coroutines.launch
@@ -97,7 +98,7 @@ fun SettingsRoute(
         onLocation = { openAppSettings(context) },
         onOpenSources = onOpenSources,
         onOpenLicenses = onOpenLicenses,
-        onOpenUrl = { openUrl(context, it) },
+        onOpenUrl = { openInAppBrowser(context, it) },
         account = AccountActions(
             onSignIn = viewModel::signIn,
             onSignOut = viewModel::signOut,
@@ -233,7 +234,7 @@ fun SourcesScreen(onBack: () -> Unit) {
                     source.name,
                     icon = Icons.AutoMirrored.Rounded.OpenInNew,
                     hint = "브라우저가 열려요",
-                    onClick = { openUrl(context, source.url) },
+                    onClick = { openInAppBrowser(context, source.url) },
                 )
             }
             Text(
@@ -261,7 +262,7 @@ fun LicensesScreen(onBack: () -> Unit) {
                     item.license,
                     icon = Icons.AutoMirrored.Rounded.OpenInNew,
                     hint = "브라우저가 열려요",
-                    onClick = { openUrl(context, item.url) },
+                    onClick = { openInAppBrowser(context, item.url) },
                 )
                 SelectionContainer {
                     Text(
@@ -364,14 +365,6 @@ private fun openAppSettings(context: Context) {
     val intent =
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
     context.startActivity(intent)
-}
-
-private fun openUrl(context: Context, url: String) {
-    try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    } catch (_: ActivityNotFoundException) {
-        // 브라우저가 없는 기기: 조용히 무시.
-    }
 }
 
 /** 메일 앱이 없으면 false. */
