@@ -62,12 +62,9 @@ class ContractTest {
     }
 
     @Test
-    fun `좌표를 받는 경로는 계약에서 deprecated 다 (앱은 부르지 않는다)`() {
+    fun `좌표를 받는 경로는 계약에 없다 (서버에서 제거, 410)`() {
         listOf("  /v1/spots:", "  /v1/spots/map:", "  /v1/geo/reverse:").forEach { path ->
-            val start = spec.indexOf("\n$path\n")
-            assertTrue("$path 가 없다", start >= 0)
-            val end = spec.indexOf("\n  /v1/", start + 1)
-            assertTrue("$path 가 deprecated 가 아니다", spec.substring(start, end).contains("deprecated: true"))
+            assertTrue("$path 가 아직 계약에 있다", !spec.contains("\n$path\n"))
         }
     }
 
@@ -78,11 +75,13 @@ class ContractTest {
 
     @Test
     fun `When enum 이 계약과 같다`() {
-        assertEquals(enumAfter("name: when"), When.entries.map { it.code })
+        assertEquals(enumAfter("    When:"), When.entries.map { it.code })
     }
 
     @Test
-    fun `free 는 쿼리 필터로 존재한다`() {
-        assertTrue(spec.contains("name: free"))
+    fun `무료 여부는 지역 파일 항목에 있다 (기기에서 거른다)`() {
+        val start = spec.indexOf("    RegionSpot:\n")
+        assertTrue("RegionSpot 스키마가 없다", start >= 0)
+        assertTrue(spec.indexOf("is_free:", start) > start)
     }
 }
